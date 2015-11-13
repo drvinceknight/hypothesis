@@ -375,6 +375,28 @@ will terminate.
 )
 
 Settings.define_setting(
+    u'max_mutations',
+    default=10,
+    description="""
+Hypothesis will try this many variations on a single example before moving on
+to an entirely fresh start. If you've got hard to satisfy properties raising
+this might help, but you probably shouldn't touch this dial unless you really
+know what you're doing.
+"""
+)
+
+Settings.define_setting(
+    u'buffer_size',
+    default=8 * 1024,
+    description="""
+The size of the underlying data used to generate examples. If you need to
+generate really large examples you may want to increase this, but it will make
+your tests slower.
+"""
+)
+
+
+Settings.define_setting(
     u'max_shrinks',
     default=500,
     description="""

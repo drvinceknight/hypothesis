@@ -433,15 +433,8 @@ def lists(
         if max_size == 0:
             return builds(list)
         check_strategy(elements)
-        if min_size is not None and elements.template_upper_bound < min_size:
-            raise InvalidArgument((
-                u'Cannot generate unique lists of size %d from %r, which '
-                u'contains no more than %d distinct values') % (
-                    min_size, elements, elements.template_upper_bound,
-            ))
         min_size = min_size or 0
         max_size = max_size or float(u'inf')
-        max_size = min(max_size, elements.template_upper_bound)
         if average_size is None:
             if max_size < float(u'inf'):
                 if max_size <= 5:
@@ -464,8 +457,7 @@ def lists(
         return result
 
     check_valid_sizes(min_size, average_size, max_size)
-    from hypothesis.searchstrategy.collections import ListStrategy, \
-        SingleElementListStrategy
+    from hypothesis.searchstrategy.collections import ListStrategy
     if min_size is None:
         min_size = 0
     if average_size is None:
@@ -483,14 +475,6 @@ def lists(
             return ListStrategy(())
     else:
         check_strategy(elements)
-        if elements.template_upper_bound == 1:
-            from hypothesis.searchstrategy.numbers import IntegersFromStrategy
-            if max_size is None:
-                length_strat = IntegersFromStrategy(
-                    min_size, average_size=average_size - min_size)
-            else:
-                length_strat = integers(min_size, max_size)
-            return SingleElementListStrategy(elements, length_strat)
         return ListStrategy(
             (elements,), average_length=average_size,
             min_size=min_size, max_size=max_size,
@@ -559,18 +543,6 @@ def dictionaries(
         return fixed_dictionaries(dict_class())
     check_strategy(keys)
     check_strategy(values)
-
-    if min_size is not None and min_size > keys.template_upper_bound:
-        raise InvalidArgument((
-            u'Cannot generate dictionaries of size %d with keys from %r, '
-            u'which contains no more than %d distinct values') % (
-                min_size, keys, keys.template_upper_bound,
-        ))
-
-    if max_size is None:
-        max_size = keys.template_upper_bound
-    else:
-        max_size = min(max_size, keys.template_upper_bound)
 
     return lists(
         tuples(keys, values),

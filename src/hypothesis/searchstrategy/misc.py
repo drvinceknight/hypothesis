@@ -17,10 +17,11 @@
 from __future__ import division, print_function, absolute_import
 
 import hypothesis.internal.distributions as dist
+import hypothesis.internal.conjecture.utils as d
 from hypothesis.types import RandomWithSeed
 from hypothesis.internal.compat import hrange, integer_types
-from hypothesis.searchstrategy.strategies import BadData, check_type, \
-    SearchStrategy, check_data_type, MappedSearchStrategy
+from hypothesis.searchstrategy.strategies import SearchStrategy, \
+    MappedSearchStrategy
 
 
 class BoolStrategy(SearchStrategy):
@@ -32,29 +33,8 @@ class BoolStrategy(SearchStrategy):
     def __repr__(self):
         return u'BoolStrategy()'
 
-    def reify(self, value):
-        return value
-
-    def strictly_simpler(self, x, y):
-        return (not x) and y
-
-    def basic_simplify(self, random, value):
-        if value:
-            yield False
-
-    def draw_parameter(self, random):
-        return random.random()
-
-    def draw_template(self, random, p):
-        return dist.biased_coin(random, p)
-
-    def to_basic(self, value):
-        check_type(bool, value)
-        return int(value)
-
-    def from_basic(self, value):
-        check_data_type(int, value)
-        return bool(value)
+    def do_draw(self, data):
+        return d.boolean(data)
 
 
 class JustStrategy(SearchStrategy):
@@ -71,26 +51,8 @@ class JustStrategy(SearchStrategy):
     def __repr__(self):
         return u'JustStrategy(value=%r)' % (self.value,)
 
-    def draw_parameter(self, random):
-        return None
-
-    def draw_template(self, random, pv):
-        return None
-
-    def reify(self, template):
-        assert template is None
+    def do_draw(self, data):
         return self.value
-
-    def simplifiers(self, random, template):
-        return ()
-
-    def to_basic(self, template):
-        return None
-
-    def from_basic(self, data):
-        if data is not None:
-            raise BadData(u'Expected None but got %r' % (repr(data,)))
-        return None
 
 
 class RandomStrategy(MappedSearchStrategy):

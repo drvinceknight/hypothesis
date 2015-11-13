@@ -82,7 +82,7 @@ def minimal(
     settings = settings or Settings(
         max_examples=5000,
         max_iterations=10000,
-        max_shrinks=5000,
+        max_shrinks=10000,
     )
 
     condition = condition or (lambda x: True)

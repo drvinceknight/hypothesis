@@ -14,7 +14,6 @@
 #
 # END HEADER
 
-from hypothesis.searchstrategy.strategies import BadData
 from hypothesis.database.formats import JSONFormat
 from hypothesis.database.backend import SQLiteBackend
 

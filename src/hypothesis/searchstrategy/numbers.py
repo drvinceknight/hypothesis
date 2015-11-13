@@ -21,12 +21,12 @@ import math
 import struct
 from collections import namedtuple
 
-import hypothesis.internal.distributions as dist
+import hypothesis.internal.conjecture.utils as d
 from hypothesis.utils.size import clamp
 from hypothesis.internal.compat import hrange, text_type, integer_types
 from hypothesis.searchstrategy.misc import SampledFromStrategy
-from hypothesis.searchstrategy.strategies import BadData, check_type, \
-    infinitish, SearchStrategy, check_data_type, MappedSearchStrategy
+from hypothesis.searchstrategy.strategies import SearchStrategy, \
+    MappedSearchStrategy
 
 
 def integer_or_bad(data):
@@ -46,69 +46,10 @@ class IntStrategy(SearchStrategy):
 
     """
 
-    def from_basic(self, data):
-        return integer_or_bad(data)
-
-    def to_basic(self, template):
-        return text_type(template)
-
-    def simplifiers(self, random, template):
-        yield self.try_negate
-        yield self.try_small_numbers
-        i = 1
-        while i < abs(template):
-            yield self.try_shrink(i, 2 * i)
-            i *= 2
-
-    def reify(self, template):
-        return int(template)
-
-    def strictly_simpler(self, x, y):
-        if y < 0:
-            return x > y
-        if y == 0:
-            return False
-        return 0 <= x < y
-
-    def try_negate(self, random, x):
-        if x >= 0:
-            return
-        yield -x
-
-    def try_small_numbers(self, random, x):
-        if x != 0:
-            yield 0
-        if x > 1:
-            yield 1
-        if x < -1:
-            yield -1
-
-    def try_shrink(self, lo, hi):
-        def accept(random, x):
-            if x < 0:
-                for i in accept(random, -x):
-                    yield -i
-            if x <= lo:
-                return
-
-            lb = lo
-            while True:
-                yield lb
-                new_lb = (lb + x) // 2
-                if new_lb <= lb or new_lb >= hi:
-                    return
-                if new_lb > lb + 2:
-                    yield random.randint(lb + 1, new_lb - 1)
-                lb = new_lb
-        accept.__name__ = str(
-            u'try_shrink(%d, %d)' % (lo, hi)
-        )
-        return accept
-
 
 class IntegersFromStrategy(SearchStrategy):
 
-    def __init__(self, lower_bound, average_size=1000.0):
+    def __init__(self, lower_bound, average_size=100000.0):
         super(IntegersFromStrategy, self).__init__()
         self.lower_bound = lower_bound
         self.average_size = average_size
@@ -116,63 +57,8 @@ class IntegersFromStrategy(SearchStrategy):
     def __repr__(self):
         return u'IntegersFromStrategy(%d)' % (self.lower_bound,)
 
-    def draw_parameter(self, random):
-        return clamp(
-            0.0,
-            random.random() * 2 / self.average_size,
-            1 - 10e-6,
-        )
-
-    def draw_template(self, random, parameter):
-        return dist.geometric(random, parameter)
-
-    def reify(self, template):
-        return self.lower_bound + template
-
-    def try_shrink(self, i):
-        lo = i
-        hi = 2 * i
-
-        def accept(random, x):
-            if x <= lo:
-                return
-
-            lb = lo
-            while True:
-                yield lb
-                new_lb = (lb + x) // 2
-                if new_lb <= lb or new_lb >= hi:
-                    return
-                if new_lb > lb + 2:
-                    yield random.randint(lb + 1, new_lb - 1)
-                lb = new_lb
-        accept.__name__ = str(
-            u'try_shrink(%d, %d)' % (lo, hi)
-        )
-        return accept
-
-    def simplify_to_lower_bound(self, random, template):
-        yield 0
-
-    def simplifiers(self, random, template):
-        if template == 0:
-            return
-        yield self.simplify_to_lower_bound
-        i = 1
-        while i < abs(template):
-            yield self.try_shrink(i)
-            i *= 2
-
-    def from_basic(self, data):
-        data = integer_or_bad(data)
-        if data < 0:
-            raise BadData(u'Value %d out of range [0, infinity)' % (
-                data,
-            ))
-        return data
-
-    def to_basic(self, template):
-        return text_type(template)
+    def do_draw(self, data):
+        return self.lower_bound + d.geometric(data, 1.0 / self.average_size)
 
 
 class RandomGeometricIntStrategy(IntStrategy):
@@ -185,24 +71,13 @@ class RandomGeometricIntStrategy(IntStrategy):
     the small.
 
     """
-    Parameter = namedtuple(
-        u'Parameter',
-        (u'negative_probability', u'p')
-    )
-
     def __repr__(self):
         return u'RandomGeometricIntStrategy()'
 
-    def draw_parameter(self, random):
-        return self.Parameter(
-            negative_probability=random.betavariate(0.5, 0.5),
-            p=random.betavariate(0.2, 1.8),
-        )
-
-    def draw_template(self, random, parameter):
-        value = dist.geometric(random, parameter.p)
-        if dist.biased_coin(random, parameter.negative_probability):
-            value = -value
+    def do_draw(self, data):
+        value = d.geometric(data, 1.0 - d.fractional_float(data))
+        if d.boolean(data):
+            value = -1
         return value
 
 
@@ -215,16 +90,8 @@ class WideRangeIntStrategy(IntStrategy):
     def __repr__(self):
         return u'WideRangeIntStrategy()'
 
-    def draw_parameter(self, random):
-        return self.Parameter(
-            center=random.randint(-2 ** 129, 2 ** 129),
-            width=2 ** random.randint(0, 256),
-        )
-
-    def draw_template(self, random, parameter):
-        return parameter.center + random.randint(
-            -parameter.width, parameter.width
-        )
+    def do_draw(self, data):
+        return d.n_byte_signed(data, 20)
 
 
 class BoundedIntStrategy(SearchStrategy):
@@ -238,53 +105,12 @@ class BoundedIntStrategy(SearchStrategy):
         self.end = end
         if start > end:
             raise ValueError(u'Invalid range [%d, %d]' % (start, end))
-        self.template_upper_bound = infinitish(end - start + 1)
 
     def __repr__(self):
         return u'BoundedIntStrategy(%d, %d)' % (self.start, self.end)
 
-    def strictly_simpler(self, x, y):
-        return x < y
-
-    def draw_parameter(self, random):
-        n = 1 + dist.geometric(random, 0.01)
-        results = []
-        for _ in hrange(n):
-            results.append(random.randint(self.start, self.end))
-        return results
-
-    def from_basic(self, data):
-        data = integer_or_bad(data)
-        if data < self.start or data > self.end:
-            raise BadData(u'Value %d out of range [%d, %d]' % (
-                data, self.start, self.end
-            ))
-        return data
-
-    def to_basic(self, template):
-        return text_type(template)
-
-    def reify(self, value):
-        return value
-
-    def draw_template(self, random, parameter):
-        return random.choice(parameter)
-
-    def basic_simplify(self, random, x):
-        if x == self.start:
-            return
-
-        probe = self.start
-        while True:
-            yield probe
-            new_probe = (x + probe) // 2
-            if new_probe > probe:
-                probe = new_probe
-            else:
-                break
-
-        for _ in hrange(10):
-            yield random.randint(self.start, x - 1)
+    def do_draw(self, data):
+        return d.integer_range(data, self.start, self.end)
 
 
 def is_integral(value):

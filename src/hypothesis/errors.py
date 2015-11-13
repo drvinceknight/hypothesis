@@ -176,3 +176,9 @@ class HypothesisDeprecationWarning(HypothesisException, DeprecationWarning):
 
 
 warnings.simplefilter(u'once', HypothesisDeprecationWarning)
+
+
+class Frozen(HypothesisException):
+
+    """Raised when a mutation method has been called on a TestData object after
+    freeze() has been called."""

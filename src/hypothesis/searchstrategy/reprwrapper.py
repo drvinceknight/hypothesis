@@ -38,24 +38,3 @@ class ReprWrapperStrategy(WrapperStrategy):
         if inspect.isfunction(self.representation):
             self.representation = self.representation()
         return self.representation
-
-    def draw_parameter(self, random):
-        return self.wrapped_strategy.draw_parameter(random)
-
-    def draw_template(self, random, pv):
-        return self.wrapped_strategy.draw_template(random, pv)
-
-    def reify(self, value):
-        return self.wrapped_strategy.reify(value)
-
-    def simplifiers(self, random, template):
-        return self.wrapped_strategy.simplifiers(random, template)
-
-    def strictly_simpler(self, x, y):
-        return self.wrapped_strategy.strictly_simpler(x, y)
-
-    def to_basic(self, template):
-        return self.wrapped_strategy.to_basic(template)
-
-    def from_basic(self, data):
-        return self.wrapped_strategy.from_basic(data)

@@ -31,7 +31,7 @@ from hypothesis.strategies import integers, floats, just, one_of, \
     frozensets, complex_numbers, sets, text, binary, decimals, fractions, \
     none, randoms, builds, fixed_dictionaries, recursive
 from hypothesis.internal.compat import hrange
-from hypothesis.searchstrategy.narytree import n_ary_tree
+# from hypothesis.searchstrategy.narytree import n_ary_tree
 from hypothesis.utils.show import show
 
 
@@ -68,8 +68,8 @@ with Settings(average_list_length=10.0):
         EvalledIntStream,
         lists(max_size=0), tuples(), sets(max_size=0), frozensets(max_size=0),
         fixed_dictionaries({}),
-        n_ary_tree(booleans(), booleans(), booleans()),
-        n_ary_tree(integers(), integers(), integers()),
+        #n_ary_tree(booleans(), booleans(), booleans()),
+        #n_ary_tree(integers(), integers(), integers()),
         abc(booleans(), booleans(), booleans()),
         abc(booleans(), booleans(), integers()),
         templates_for(one_of(*map(just, hrange(10)))),

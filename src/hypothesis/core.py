@@ -784,10 +784,12 @@ def find(specifier, condition, settings=None, random=None, storage=None):
     random = random or new_random()
     successful_examples = [0]
 
-    def template_condition(template):
-        with BuildContext():
-            result = search.reify(template)
+    def template_condition(data):
+        try:
+            result = data.draw(search)
             success = condition(result)
+        except UnsatisfiedAssumption:
+            data.mark_invalid()
 
         if success:
             successful_examples[0] += 1
@@ -805,25 +807,13 @@ def find(specifier, condition, settings=None, random=None, storage=None):
                 verbose_report(lambda: u'Shrunk example to %s' % (
                     repr(result),
                 ))
-        return success
+        if success:
+            data.mark_interesting()
+    from hypothesis.internal.conjecture.engine import TestRunner
+    from hypothesis.internal.conjecture.data import TestData, Status
 
-    template_condition.__name__ = condition.__name__
-    tracker = Tracker()
-
-    try:
-        template = best_satisfying_template(
-            search, random, template_condition, settings,
-            tracker=tracker, max_parameter_tries=2,
-            storage=storage,
-        )
-        with BuildContext(is_final=True, close_on_capture=False):
-            return search.reify(template)
-    except Timeout:
-        raise
-    except NoSuchExample:
-        if search.template_upper_bound <= len(tracker):
-            raise DefinitelyNoSuchExample(
-                get_pretty_function_description(condition),
-                search.template_upper_bound,
-            )
-        raise NoSuchExample(get_pretty_function_description(condition))
+    runner = TestRunner(template_condition, settings=settings, random=random)
+    runner.run()
+    if runner.last_data.status == Status.INTERESTING:
+        return TestData(runner.last_data.buffer).draw(search)
+    raise NoSuchExample(get_pretty_function_description(condition))
