@@ -18,7 +18,6 @@ from __future__ import division, print_function, absolute_import
 
 import hypothesis.internal.conjecture.utils as d
 from hypothesis.types import RandomWithSeed
-from hypothesis.internal.compat import hrange, integer_types
 from hypothesis.searchstrategy.strategies import SearchStrategy, \
     MappedSearchStrategy
 
@@ -33,7 +32,10 @@ class BoolStrategy(SearchStrategy):
         return u'BoolStrategy()'
 
     def do_draw(self, data):
-        return d.boolean(data)
+        result = d.boolean(data)
+        if result:
+            data.incur_cost(2)
+        return result
 
 
 class JustStrategy(SearchStrategy):

@@ -68,7 +68,8 @@ class RandomGeometricIntStrategy(IntStrategy):
     def do_draw(self, data):
         value = d.geometric(data, 1.0 - d.fractional_float(data))
         if d.boolean(data):
-            value = -1
+            data.incur_cost(1)
+            value = -value
         return value
 
 

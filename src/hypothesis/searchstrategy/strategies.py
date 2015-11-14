@@ -217,8 +217,9 @@ class OneOfStrategy(SearchStrategy):
         self.element_strategies = list(strategies)
 
     def do_draw(self, data):
-        return data.draw(self.element_strategies[
-            integer_range(data, 0, len(self.element_strategies) - 1)])
+        i = integer_range(data, 0, len(self.element_strategies) - 1)
+        data.incur_cost(i)
+        return data.draw(self.element_strategies[i])
 
     def __repr__(self):
         return u' | '.join(map(repr, self.element_strategies))
