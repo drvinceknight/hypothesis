@@ -30,13 +30,8 @@ warnings.filterwarnings(u'error', category=UnicodeWarning)
 
 set_hypothesis_home_dir(mkdtemp())
 
-Settings.default.timeout = -1
-Settings.default.strict = True
-
-Settings.register_profile(
-    'speedy', Settings(
-        timeout=1, max_examples=5,
-    ))
+Settings.register_profile('default', Settings(timeout=-1, strict=True))
+Settings.register_profile('speedy', Settings(timeout=1, max_examples=5))
 Settings.load_profile(os.getenv('HYPOTHESIS_PROFILE', 'default'))
 
 
