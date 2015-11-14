@@ -70,7 +70,7 @@ class StopTest(BaseException):
 
 class TestData(object):
 
-    def __init__(self, buffer: bytes):
+    def __init__(self, buffer, generate_up_to=-1, random=None):
         assert isinstance(buffer, bytes)
         self.buffer = buffer
         self.output = bytearray()
@@ -80,6 +80,13 @@ class TestData(object):
         self.intervals = []
         self.interval_stack = []
         self.cost = 0
+        self.random = random
+        self.generate_up_to = generate_up_to
+        if self.random is not None:
+            self.duplication_rate = random.random()
+        else:
+            self.duplication_rate = 0.0
+        self.words = {}
 
     def __assert_not_frozen(self, name):
         if self.frozen:
@@ -134,12 +141,30 @@ class TestData(object):
         self.__assert_not_frozen('draw_bytes')
         self.index += n
         if self.index > len(self.buffer):
-            self.status = Status.OVERRUN
-            self.freeze()
-            raise StopTest(self)
+            if self.index <= self.generate_up_to:
+                if self.index - n < len(self.buffer):
+                    k = self.index - len(self.buffer)
+                    self.buffer += self.random.getrandbits(k * 8).to_bytes(
+                        k, 'big')
+                else:
+                    # We might want to fetch a previous one here.
+                    if (
+                        n in self.words and
+                        self.random.random() <= self.duplication_rate
+                    ):
+                        self.buffer += self.random.choice(self.words[n])
+                    else:
+                        self.buffer += self.random.getrandbits(n * 8).to_bytes(
+                            n, 'big')
+            else:
+                self.status = Status.OVERRUN
+                self.freeze()
+                raise StopTest(self)
         self.intervals.append((self.index - n, self.index))
         result = self.buffer[self.index - n:self.index]
         assert len(result) == n
+        if self.generate_up_to > 0:
+            self.words.setdefault(n, []).append(result)
         return result
 
     def mark_interesting(self):

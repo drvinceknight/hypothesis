@@ -44,8 +44,10 @@ class TestRunner(object):
         self.random = random or Random()
 
     def new_buffer(self):
-        buffer = self.rand_bytes(self.settings.buffer_size)
-        self.last_data = TestData(buffer)
+        self.last_data = TestData(
+            b'', generate_up_to=self.settings.buffer_size,
+            random=self.random,
+        )
         self.test_function(self.last_data)
         self.last_data.freeze()
 
