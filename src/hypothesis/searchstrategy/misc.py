@@ -16,7 +16,6 @@
 
 from __future__ import division, print_function, absolute_import
 
-import hypothesis.internal.distributions as dist
 import hypothesis.internal.conjecture.utils as d
 from hypothesis.types import RandomWithSeed
 from hypothesis.internal.compat import hrange, integer_types
@@ -85,37 +84,5 @@ class SampledFromStrategy(SearchStrategy):
         self.template_upper_bound = len(self.elements)
         assert self.elements
 
-    def to_basic(self, template):
-        return template
-
-    def from_basic(self, data):
-        check_data_type(integer_types, data)
-        if data < 0:
-            raise BadData(u'Index out of range: %d < 0' % (data,))
-        elif data >= len(self.elements):
-            raise BadData(
-                u'Index out of range: %d >= %d' % (data, len(self.elements)))
-
-        return data
-
-    def basic_simplify(self, random, template):
-        for i in hrange(0, template):
-            yield i
-
-    def strictly_simpler(self, x, y):
-        return x < y
-
-    def __repr__(self):
-        return u'SampledFromStrategy(%r)' % (self.elements,)
-
-    def draw_parameter(self, random):
-        n = len(self.elements)
-        return [
-            random.randint(0, n - 1) for _ in hrange(n)
-        ]
-
-    def draw_template(self, random, pv):
-        return random.choice(pv)
-
-    def reify(self, template):
-        return self.elements[template]
+    def do_draw(self, data):
+        return d.choice(data, self.elements)

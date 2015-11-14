@@ -23,6 +23,11 @@ def n_byte_unsigned(data, n):
     return int.from_bytes(data.draw_bytes(n), 'big')
 
 
+def n_bit_unsigned(data, n):
+    bn = int(math.ceil(n / 8))
+    return n_byte_unsigned(data, bn) & ((1 << n) - 1)
+
+
 def byte(data):
     return n_byte_unsigned(data, 1)
 
@@ -52,6 +57,10 @@ def integer_range(data, lower, upper):
         probe = n_byte_unsigned(data, nbytes) & mask
         if probe <= gap:
             return lower + probe
+
+
+def choice(data, values):
+    return values[integer_range(data, 0, len(values) - 1)]
 
 
 def fractional_float(data):

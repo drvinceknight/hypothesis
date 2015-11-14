@@ -22,19 +22,10 @@ import struct
 from collections import namedtuple
 
 import hypothesis.internal.conjecture.utils as d
-from hypothesis.utils.size import clamp
-from hypothesis.internal.compat import hrange, text_type, integer_types
+from hypothesis.internal.floats import int_to_float, sign, float_to_int
 from hypothesis.searchstrategy.misc import SampledFromStrategy
 from hypothesis.searchstrategy.strategies import SearchStrategy, \
     MappedSearchStrategy
-
-
-def integer_or_bad(data):
-    check_data_type(text_type, data)
-    try:
-        return int(data)
-    except ValueError:
-        raise BadData(u'Invalid integer %r' % (data,))
 
 
 class IntStrategy(SearchStrategy):
@@ -119,6 +110,16 @@ def is_integral(value):
     except (OverflowError, ValueError):
         return False
 
+NASTY_FLOATS = [
+    0.0, 0.5, 1.0 / 3, 10e6, 10e-6, 1.175494351e-38, 2.2250738585072014e-308,
+    1.7976931348623157e+308, 3.402823466e+38, 9007199254740992, 1 - 10e-6,
+    2 + 10e-6, 1.192092896e-07, 2.2204460492503131e-016,
+    float('inf'), float('nan'),
+]
+NASTY_FLOATS.extend([-x for x in NASTY_FLOATS])
+assert len(NASTY_FLOATS) == 32
+INFINITY = float('inf')
+
 
 class FloatStrategy(SearchStrategy):
 
@@ -131,161 +132,27 @@ class FloatStrategy(SearchStrategy):
     def __repr__(self):
         return u'%s()' % (self.__class__.__name__,)
 
-    def strictly_simpler(self, x, y):
-        if math.isnan(x):
-            return False
-        if math.isnan(y):
-            return True
-        if math.isinf(y) and not math.isinf(x):
-            return True
-        if math.isinf(x) and not math.isinf(y):
-            return False
-        if x < 0 and y >= 0:
-            return False
-        if y < 0 and x >= 0:
-            return True
-        if is_integral(x):
-            if not is_integral(y):
-                return True
-            return self.int_strategy.strictly_simpler(int(x), int(y))
-        if is_integral(y):
-            return False
-        if y > 0:
-            return 0 <= x < y
+    def do_draw(self, data):
+        branch = 255 - d.byte(data)
+        k = d.n_byte_unsigned(data, 8)
+        if branch < 32:
+            # This branch ignores k but we draw it anyway so we can simplify
+            # into it if we make it out of this branch.
+            f = NASTY_FLOATS[31 - branch & 31]
+            data.incur_cost(100)
+        elif branch >= 201:
+            f = float(k)
+            if branch < 230:
+                f = -f
         else:
-            # The y == 0 case is handled by is_integral(y)
-            assert y < 0
-            return x > y
-
-    def to_basic(self, value):
-        check_type(float, value)
-        return (
-            struct.unpack(b'!Q', struct.pack(b'!d', value))[0]
-        )
-
-    def from_basic(self, value):
-        check_data_type(integer_types, value)
-        try:
-            return (
-                struct.unpack(b'!d', struct.pack(b'!Q', value))[0]
-            )
-        except (struct.error, ValueError, OverflowError, TypeError) as e:
-            raise BadData(e.args[0])
-
-    def reify(self, value):
-        return float(value)
-
-    def simplifiers(self, random, x):
-        if x == 0.0:
-            return
-        yield self.simplify_weird_values
-        yield self.push_towards_one
-        try:
-            for simplify in self.int_strategy.simplifiers(
-                random, int(math.floor(x))
-            ):
-                yield self.simplify_integral(simplify)
-        except (OverflowError, ValueError):
-            pass
-        yield self.basic_simplify
-
-    def simplify_weird_values(self, random, x):
-        if math.isnan(x):
-            yield 0.0
-            yield float(u'inf')
-            yield -float(u'inf')
-            return
-        if math.isinf(x):
-            yield math.copysign(
-                sys.float_info.max, x
-            )
-            if x < 0:
-                yield -x
-            return
-
-    def push_towards_one(self, random, x):
-        if x > 1.0 and not math.isinf(x):
-            assert self.strictly_simpler(1.0, x)
-            yield 1.0
-            y = math.sqrt(x)
-            if is_integral(x):
-                y = float(math.floor(y))
-            assert(self.strictly_simpler(y, x))
-            yield y
-
-    def simplify_integral(self, simplify):
-        def accept(random, x):
-            if not is_integral(x):
-                try:
-                    yield float(math.floor(x))
-                except (OverflowError, ValueError):
-                    pass
-                return
-            for m in simplify(random, int(math.floor(x))):
-                yield float(m)
-        accept.__name__ = str(
-            u'simplify_integral(%s)' % (simplify.__name__,)
-        )
-        return accept
-
-    def basic_simplify(self, random, x):
-        if x == 0.0:
-            return
-
-        yield 0.0
-
-        if x < 0:
-            yield -x
-            for t in self.basic_simplify(random, -x):
-                yield -t
-            return
-        if x < 1:
-            return
-
-        if not is_integral(x):
-            for e in range(10):
-                scale = 2 ** e
-                try:
-                    y = float(math.floor(x * scale)) / scale
-                except (OverflowError, ValueError):
-                    break
-                yield y
-
-STANDARD_NAN = float(u'nan')
-
-
-class WrapperFloatStrategy(FloatStrategy):
-
-    def __init__(self, sub_strategy):
-        super(WrapperFloatStrategy, self).__init__()
-        self.sub_strategy = sub_strategy
-
-    def __repr__(self):
-        return u'WrapperFloatStrategy(%r)' % (self.sub_strategy,)
-
-    def draw_parameter(self, random):
-        return self.sub_strategy.draw_parameter(random)
-
-    def draw_template(self, random, pv):
-        template = self.sub_strategy.reify(
-            self.sub_strategy.draw_template(random, pv))
-        if math.isnan(template):
-            return STANDARD_NAN
-        else:
-            return template
-
-
-class JustIntFloats(FloatStrategy):
-
-    def __init__(self):
-        super(JustIntFloats, self).__init__()
-        self.int_strategy = RandomGeometricIntStrategy()
-
-    def draw_parameter(self, random):
-        return self.int_strategy.draw_parameter(random)
-
-    def draw_template(self, random, pv):
-        return float(self.int_strategy.draw_template(random, pv))
+            f = struct.unpack(b'!d', struct.pack(b'!Q', k))[0]
+        if math.isinf(f):
+            data.incur_cost(2)
+        elif math.isnan(f):
+            data.incur_cost(10)
+        elif 0 < abs(f) < 1:
+            data.incur_cost(1)
+        return f
 
 
 def compose_float(sign, exponent, fraction):
@@ -304,50 +171,6 @@ class FullRangeFloats(FloatStrategy):
         super(FullRangeFloats, self).__init__()
         self.allow_nan = allow_nan
         self.allow_infinity = allow_infinity
-
-    def draw_parameter(self, random):
-        return self.Parameter(
-            negative_probability=dist.uniform_float(random, 0, 1),
-            subnormal_probability=dist.uniform_float(random, 0, 0.5),
-        )
-
-    def draw_template(self, random, pv):
-        sign = int(dist.biased_coin(random, pv.negative_probability))
-        if dist.biased_coin(random, pv.subnormal_probability):
-            return compose_float(
-                sign,
-                0,
-                random.getrandbits(52)
-            )
-        else:
-            if self.allow_infinity and self.allow_nan:
-                return compose_float(
-                    sign,
-                    random.getrandbits(11),
-                    random.getrandbits(52)
-                )
-            if not self.allow_infinity and not self.allow_nan:
-                exponent = random.getrandbits(11)
-                while exponent == 2047:
-                    exponent = random.getrandbits(11)
-                return compose_float(
-                    sign,
-                    exponent,
-                    random.getrandbits(52)
-                )
-
-            exponent = random.getrandbits(11)
-            if exponent == 2047:
-                return compose_float(
-                    sign,
-                    exponent,
-                    0 if self.allow_infinity else 1
-                )
-            return compose_float(
-                sign,
-                exponent,
-                random.getrandbits(52)
-            )
 
 
 class FixedBoundedFloatStrategy(FloatStrategy):
@@ -368,123 +191,34 @@ class FixedBoundedFloatStrategy(FloatStrategy):
         self.lower_bound = float(lower_bound)
         self.upper_bound = float(upper_bound)
         assert upper_bound >= lower_bound
+        self.intervals = []
+        if sign(upper_bound) > 0:
+            if sign(lower_bound) > 0:
+                self.intervals.append((
+                    float_to_int(self.lower_bound),
+                    float_to_int(self.upper_bound)))
+            else:
+                self.intervals.append((
+                    float_to_int(0.0),
+                    float_to_int(self.upper_bound)))
+                self.intervals.append((
+                    float_to_int(-0.0),
+                    float_to_int(self.lower_bound)))
+        else:
+            self.intervals.append((
+                float_to_int(self.upper_bound),
+                float_to_int(self.lower_bound)))
 
     def __repr__(self):
         return u'FixedBoundedFloatStrategy(%s, %s)' % (
             self.lower_bound, self.upper_bound,
         )
 
-    def draw_parameter(self, random):
-        return self.Parameter(
-            cut=random.random(),
-            leftwards=dist.biased_coin(random, 0.5)
+    def do_draw(self, data):
+        interval = d.choice(data, self.intervals)
+        return int_to_float(
+            d.integer_range(data, *interval)
         )
-
-    def draw_template(self, random, pv):
-        random = random
-        cut = self.lower_bound + pv.cut * (self.upper_bound - self.lower_bound)
-        if pv.leftwards:
-            left = self.lower_bound
-            right = cut
-        else:
-            left = cut
-            right = self.upper_bound
-        return left + random.random() * (right - left)
-
-    def strictly_simpler(self, x, y):
-        return x < y
-
-    def simplifiers(self, random, template):
-        yield self.basic_simplify
-
-    def basic_simplify(self, random, value):
-        if value == self.lower_bound:
-            return
-        lb = self.lower_bound
-        for _ in hrange(32):
-            yield lb
-            lb = (lb + value) * 0.5
-
-    def from_basic(self, data):
-        result = super(FixedBoundedFloatStrategy, self).from_basic(data)
-        if math.isnan(result):
-            raise BadData(u'NaN not allowed in range')
-        if result < self.lower_bound or result > self.upper_bound:
-            raise BadData(u'Value %f out of range [%f, %f]' % (
-                result, self.lower_bound, self.upper_bound
-            ))
-        return result
-
-
-class BoundedFloatStrategy(FloatStrategy):
-
-    """A float strategy such that every conditional distribution is bounded but
-    the endpoints may be arbitrary."""
-
-    Parameter = namedtuple(
-        u'Parameter',
-        (u'left', u'length', u'spread'),
-    )
-
-    def __init__(self):
-        super(BoundedFloatStrategy, self).__init__()
-        self.inner_strategy = FixedBoundedFloatStrategy(0, 1)
-
-    def draw_parameter(self, random):
-        return self.Parameter(
-            left=random.normalvariate(0, 1),
-            length=random.expovariate(1),
-            spread=self.inner_strategy.draw_parameter(random),
-        )
-
-    def draw_template(self, random, pv):
-        return pv.left + self.inner_strategy.draw_template(
-            random, pv.spread
-        ) * pv.length
-
-
-class GaussianFloatStrategy(FloatStrategy):
-
-    """A float strategy such that every conditional distribution is drawn from
-    a gaussian."""
-
-    def draw_parameter(self, random):
-        size = 1000.0
-        return (
-            random.normalvariate(0, size),
-            random.expovariate(1.0 / size)
-        )
-
-    def draw_template(self, random, param):
-        mean, sd = param
-        return random.normalvariate(mean, sd)
-
-
-class ExponentialFloatStrategy(FloatStrategy):
-
-    """
-    A float strategy such that every conditional distribution is of the form
-    aX + b where a = +/- 1 and X is an exponentially distributed random
-    variable.
-    """
-
-    Parameter = namedtuple(
-        u'Parameter',
-        (u'lambd', u'zero_point', u'negative'),
-    )
-
-    def draw_parameter(self, random):
-        return self.Parameter(
-            lambd=random.gammavariate(2, 50),
-            zero_point=random.normalvariate(0, 1),
-            negative=dist.biased_coin(random, 0.5),
-        )
-
-    def draw_template(self, random, pv):
-        value = random.expovariate(pv.lambd)
-        if pv.negative:
-            value = -value
-        return pv.zero_point + value
 
 
 class NastyFloats(SampledFromStrategy):
