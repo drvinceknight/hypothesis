@@ -783,6 +783,7 @@ def find(specifier, condition, settings=None, random=None, storage=None):
 
     random = random or new_random()
     successful_examples = [0]
+    last_data = [None]
 
     def template_condition(data):
         try:
@@ -794,20 +795,24 @@ def find(specifier, condition, settings=None, random=None, storage=None):
         if success:
             successful_examples[0] += 1
 
-        if not successful_examples[0]:
-            verbose_report(lambda: u'Trying example %s' % (
-                repr(result),
-            ))
-        elif success:
-            if successful_examples[0] == 1:
-                verbose_report(lambda: u'Found satisfying example %s' % (
+        if settings.verbosity >= Verbosity.verbose:
+            if not successful_examples[0]:
+                report(lambda: u'Trying example %s' % (
                     repr(result),
                 ))
-            else:
-                verbose_report(lambda: u'Shrunk example to %s' % (
-                    repr(result),
-                ))
+            elif success:
+                if successful_examples[0] == 1:
+                    report(lambda: u'Found satisfying example %s' % (
+                        repr(result),
+                    ))
+                else:
+                    if data.better_than(last_data[0]):
+                        report(lambda: u'Shrunk example to %s' % (
+                            repr(result),
+                        ))
+                last_data[0] = data
         if success:
+            data.note(result)
             data.mark_interesting()
     from hypothesis.internal.conjecture.engine import TestRunner
     from hypothesis.internal.conjecture.data import TestData, Status

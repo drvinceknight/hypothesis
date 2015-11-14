@@ -74,7 +74,7 @@ class TestRunner(object):
             assert len(data.buffer) <= len(self.last_data.buffer)
             if len(data.buffer) == len(self.last_data.buffer):
                 assert data.buffer < self.last_data.buffer
-            return interest_key(data) < interest_key(self.last_data)
+            return data.better_than(self.last_data)
         return True
 
     def incorporate_new_buffer(self, buffer):
@@ -370,10 +370,3 @@ def find_interesting_buffer(test_function, settings=None):
     runner.run()
     if runner.last_data.status == Status.INTERESTING:
         return runner.last_data.buffer
-
-
-def interest_key(data):
-    buf = data.buffer
-    return (
-        data.cost, len(data.intervals), len(buf), buf
-    )
