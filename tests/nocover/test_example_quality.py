@@ -57,7 +57,7 @@ def test_minimize_list_of_sets_on_large_structure():
 
     x = minimal(
         lists(frozensets(integers())), test_list_in_range,
-        timeout_after=120,
+        timeout_after=40,
     )
     assert len(x) == 50
     assert len(set(x)) == 1

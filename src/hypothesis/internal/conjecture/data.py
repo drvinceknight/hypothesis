@@ -132,7 +132,7 @@ class TestData(object):
         self.frozen = True
         # Intervals are sorted as longest first, then by interval start.
         self.intervals.sort(
-            key=lambda se: (se[1] - se[0], se[0])
+            key=lambda se: (se[0] - se[1], se[0])
         )
         if self.status == Status.INTERESTING:
             self.buffer = self.buffer[:self.index]
