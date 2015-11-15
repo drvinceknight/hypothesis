@@ -795,7 +795,7 @@ def find(specifier, condition, settings=None, random=None, storage=None):
         if success:
             successful_examples[0] += 1
 
-        if settings.verbosity >= Verbosity.verbose:
+        if settings.verbosity == Verbosity.verbose:
             if not successful_examples[0]:
                 report(lambda: u'Trying example %s' % (
                     repr(result),

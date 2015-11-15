@@ -95,7 +95,10 @@ class TestRunner(object):
         self.test_function(data)
         data.freeze()
         if data.status >= self.last_data.status:
-            debug_report('%r -> %r' % (data.buffer[:data.index], data.status))
+            debug_report('%r -> %r, %s' % (
+                data.buffer[:data.index], data.status,
+                data.output.decode('utf-8'),
+            ))
         if data.status >= Status.VALID:
             self.valid_examples += 1
         if self.consider_new_test_data(data):
