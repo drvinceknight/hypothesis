@@ -115,49 +115,57 @@ class TestRunner(object):
         except RunIsComplete:
             pass
 
-    def _run(self):
-        self.new_buffer()
-        mutations = 0
-        while self.last_data.status != Status.INTERESTING:
-            if (
-                self.valid_examples >= self.settings.max_examples or
-                self.examples_considered >= self.settings.max_iterations
-            ):
-                return
-            if mutations >= self.settings.max_mutations:
-                mutations = 0
-                self.new_buffer()
-            else:
-                self.incorporate_new_buffer(
-                    self.mutate_data_to_new_buffer()
-                )
-            mutations += 1
-
-        for c in range(256):
-            if self.incorporate_new_buffer(bytes(
-                min(c, b) for b in self.last_data.buffer
-            )):
-                break
-
-        initial_changes = self.changed
+    def _deletion_pass(self):
         change_counter = -1
-        while (
-            initial_changes + self.settings.max_shrinks >=
-            self.changed > change_counter
-        ):
-            assert self.last_data.status == Status.INTERESTING
+        while self.changed > change_counter:
             change_counter = self.changed
-            interval_change_counter = -1
-            while self.changed > interval_change_counter:
-                interval_change_counter = self.changed
-                i = 0
-                while i < len(self.last_data.intervals):
-                    u, v = self.last_data.intervals[i]
-                    if not self.incorporate_new_buffer(
-                        self.last_data.buffer[:u] +
-                        self.last_data.buffer[v:]
-                    ):
-                        i += 1
+            i = 0
+            while i < len(self.last_data.intervals):
+                u, v = self.last_data.intervals[i]
+                if not self.incorporate_new_buffer(
+                    self.last_data.buffer[:u] +
+                    self.last_data.buffer[v:]
+                ):
+                    i += 1
+            if self.changed > change_counter:
+                continue
+            i = 0
+            while i + 1 < len(self.last_data.buffer):
+                if not self.incorporate_new_buffer(
+                    self.last_data.buffer[:i] +
+                    self.last_data.buffer[i + 2:]
+                ):
+                    i += 1
+            i = 0
+            while i < len(self.last_data.buffer):
+                if not self.incorporate_new_buffer(
+                    self.last_data.buffer[:i] +
+                    self.last_data.buffer[i + 1:]
+                ):
+                    i += 1
+
+    def _lexicographic_pass(self):
+        change_counter = -1
+        while change_counter < self.changed:
+            for c in range(1, 256):
+                self.incorporate_new_buffer(bytes(
+                    0 if d == c else d
+                    for d in self.last_data.buffer
+                )) or self.incorporate_new_buffer(bytes(
+                    1 if d == c else d
+                    for d in self.last_data.buffer
+                ))
+            i = 0
+            while i < len(self.last_data.buffer):
+                self.incorporate_new_buffer(
+                    self.last_data.buffer[:i] +
+                    bytes([0]) +
+                    self.last_data.buffer[i + 1:]
+                )
+                i += 1
+            i = 0
+
+            change_counter = self.changed
             i = 0
             while i < len(self.last_data.intervals):
                 u, v = self.last_data.intervals[i]
@@ -204,11 +212,11 @@ class TestRunner(object):
                             buf[:i] + bytes([c]) + buf[i + 1:]
                         ):
                             break
-                        elif self.incorporate_new_buffer(
-                            buf[:i] + bytes([c]) + self.rand_bytes((
-                                len(buf) - i - 1))
-                        ):
-                            break
+                        elif i + 1 < len(self.last_data.buffer):
+                            if self.incorporate_new_buffer(
+                                buf[:i] + bytes([c, 255]) + buf[i+2:]
+                            ):
+                                break
                 i += 1
             i = 0
             while i + 1 < len(self.last_data.buffer):
@@ -282,41 +290,69 @@ class TestRunner(object):
                                     buf[k + 1:]
                                 ):
                                     break
-            if self.changed > change_counter:
-                continue
+
+    def _quadratic_pass(self):
+        buf = self.last_data.buffer
+        for j in range(len(buf)):
             buf = self.last_data.buffer
-            for j in range(len(buf)):
+            if j >= len(buf):
+                break
+            if buf[j] == 0:
+                continue
+            for k in range(j + 1, len(buf)):
                 buf = self.last_data.buffer
-                if j >= len(buf):
+                if k >= len(buf):
                     break
+                if buf[j] > buf[k]:
+                    self.incorporate_new_buffer(
+                        buf[:j] + bytes([buf[k]]) + buf[j + 1:k] +
+                        bytes([buf[j]]) + buf[k + 1:]
+                    )
+                buf = self.last_data.buffer
+                if k >= len(buf):
+                    break
+                if buf[j] > 0 and buf[k] > 0 and buf[j] != buf[k]:
+                    for c in range(min(buf[j], buf[k]), 0, -1):
+                        if self.incorporate_new_buffer(
+                            buf[:j] + bytes([buf[j] - c]) + buf[j + 1:k] +
+                            bytes([buf[k] - c]) + buf[k + 1:]
+                        ):
+                            break
                 if buf[j] == 0:
-                    continue
-                for k in range(j + 1, len(buf)):
-                    buf = self.last_data.buffer
-                    if k >= len(buf):
-                        break
-                    if buf[j] > buf[k]:
-                        self.incorporate_new_buffer(
-                            buf[:j] + bytes([buf[k]]) + buf[j + 1:k] +
-                            bytes([buf[j]]) + buf[k + 1:]
-                        )
-                    buf = self.last_data.buffer
-                    if k >= len(buf):
-                        break
-                    if buf[j] > 0 and buf[k] > 0 and buf[j] != buf[k]:
-                        if self.incorporate_new_buffer(
-                            buf[:j] + bytes([buf[j] - 1]) + buf[j + 1:k] +
-                            bytes([buf[k] - 1]) + buf[k + 1:]
-                        ):
-                            break
-                    if buf[j] == 0:
-                        break
-                    for t in range(256):
-                        if self.incorporate_new_buffer(
-                            buf[:j] + bytes([buf[j] - 1]) + buf[j + 1:k] +
-                            bytes([t]) + buf[k + 1:]
-                        ):
-                            break
+                    break
+
+    def _run(self):
+        self.new_buffer()
+        mutations = 0
+        while self.last_data.status != Status.INTERESTING:
+            if (
+                self.valid_examples >= self.settings.max_examples or
+                self.examples_considered >= self.settings.max_iterations
+            ):
+                return
+            if mutations >= self.settings.max_mutations:
+                mutations = 0
+                self.new_buffer()
+            else:
+                self.incorporate_new_buffer(
+                    self.mutate_data_to_new_buffer()
+                )
+            mutations += 1
+
+        for c in range(256):
+            if self.incorporate_new_buffer(bytes(
+                min(c, b) for b in self.last_data.buffer
+            )):
+                break
+
+        change_counter = -1
+        while self.changed > change_counter:
+            assert self.last_data.status == Status.INTERESTING
+            change_counter = self.changed
+            self._deletion_pass()
+            self._lexicographic_pass()
+            if self.changed == change_counter:
+                self._quadratic_pass()
 
     def mutate_data_to_new_buffer(self):
         n = min(len(self.last_data.buffer), self.last_data.index)
