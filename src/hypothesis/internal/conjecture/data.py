@@ -138,6 +138,7 @@ class TestData(object):
         )
         if self.status == Status.INTERESTING:
             self.buffer = self.buffer[:self.index]
+            self.costs = self.costs[:(self.index + 1)]
 
     def draw_bytes(self, n: int) ->bytes:
         self.__assert_not_frozen('draw_bytes')
@@ -198,6 +199,6 @@ class TestData(object):
 
     def interest_key2(self):
         return (
-            self.costs,
+            len(self.costs), self.costs,
             len(self.output), [TEXT_BYTE_ORDER[c] for c in self.output],
         )
