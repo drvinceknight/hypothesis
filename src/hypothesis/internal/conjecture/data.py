@@ -46,9 +46,9 @@ CHR_ORDER = [
     '\x1e', '\x1f',
 ]
 
-TEXT_BYTE_ORDER = [
-    ord(c) for c in CHR_ORDER
-]
+TEXT_BYTE_ORDER = [0] * len(CHR_ORDER)
+for i, c in enumerate(CHR_ORDER):
+    TEXT_BYTE_ORDER[ord(c)] = i
 TEXT_BYTE_ORDER.extend(range(127, 256))
 assert len(TEXT_BYTE_ORDER) == 256
 assert sorted(TEXT_BYTE_ORDER) == list(range(256))
