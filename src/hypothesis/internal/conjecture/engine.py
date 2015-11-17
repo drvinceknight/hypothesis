@@ -102,11 +102,20 @@ class TestRunner(object):
         if self.consider_new_test_data(data):
             if self.last_data.status == Status.INTERESTING:
                 self.shrinks += 1
+            if data.status == Status.INTERESTING:
+                self.last_shrink_time = time.time()
             self.last_data = data
             self.changed += 1
             if self.shrinks >= self.settings.max_shrinks:
                 raise RunIsComplete()
             return True
+        elif (
+            self.last_data.status == Status.INTERESTING and
+            self.settings.shrink_change_timeout > 0 and
+            time.time() >= self.settings.shrink_change_timeout +
+            self.last_shrink_time
+        ):
+            raise RunIsComplete()
         return False
 
     def run(self):
@@ -351,8 +360,8 @@ class TestRunner(object):
             change_counter = self.changed
             self._deletion_pass()
             self._lexicographic_pass()
-            if self.changed == change_counter:
-                self._quadratic_pass()
+#           if self.changed == change_counter:
+#               self._quadratic_pass()
 
     def mutate_data_to_new_buffer(self):
         n = min(len(self.last_data.buffer), self.last_data.index)
