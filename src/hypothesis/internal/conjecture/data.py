@@ -79,7 +79,7 @@ class TestData(object):
         self.frozen = False
         self.intervals = []
         self.interval_stack = []
-        self.cost = 0
+        self.costs = [0] * (max(generate_up_to, len(self.buffer)) + 1)
         self.random = random
         self.generate_up_to = generate_up_to
         if self.random is not None:
@@ -87,6 +87,7 @@ class TestData(object):
         else:
             self.duplication_rate = 0.0
         self.words = {}
+        self.start_example()
 
     def __assert_not_frozen(self, name):
         if self.frozen:
@@ -124,11 +125,12 @@ class TestData(object):
     def incur_cost(self, cost):
         self.__assert_not_frozen('incur_cost')
         assert not self.frozen
-        self.cost += cost
+        self.costs[self.index] += cost
 
     def freeze(self):
         if self.frozen:
             return
+        self.stop_example()
         self.frozen = True
         # Intervals are sorted as longest first, then by interval start.
         self.intervals.sort(
@@ -196,6 +198,6 @@ class TestData(object):
 
     def interest_key2(self):
         return (
-            self.cost,
+            self.costs,
             len(self.output), [TEXT_BYTE_ORDER[c] for c in self.output],
         )
