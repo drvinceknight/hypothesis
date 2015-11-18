@@ -29,6 +29,10 @@ from hypothesis.searchstrategy.strategies import BadData, check_type, \
     infinitish, SearchStrategy, check_data_type, MappedSearchStrategy
 
 
+def is_negative(x):
+    return math.copysign(1, x) < 0
+
+
 def integer_or_bad(data):
     check_data_type(text_type, data)
     try:
@@ -288,6 +292,8 @@ class BoundedIntStrategy(SearchStrategy):
 
 
 def is_integral(value):
+    if value == 0.0:
+        return not is_negative(value)
     try:
         return int(value) == value
     except (OverflowError, ValueError):
@@ -314,9 +320,9 @@ class FloatStrategy(SearchStrategy):
             return True
         if math.isinf(x) and not math.isinf(y):
             return False
-        if x < 0 and y >= 0:
+        if is_negative(x) and not is_negative(y):
             return False
-        if y < 0 and x >= 0:
+        if is_negative(y) and not is_negative(x):
             return True
         if is_integral(x):
             if not is_integral(y):
@@ -327,8 +333,6 @@ class FloatStrategy(SearchStrategy):
         if y > 0:
             return 0 <= x < y
         else:
-            # The y == 0 case is handled by is_integral(y)
-            assert y < 0
             return x > y
 
     def to_basic(self, value):
@@ -350,8 +354,6 @@ class FloatStrategy(SearchStrategy):
         return float(value)
 
     def simplifiers(self, random, x):
-        if x == 0.0:
-            return
         yield self.simplify_weird_values
         yield self.push_towards_one
         try:
@@ -373,7 +375,7 @@ class FloatStrategy(SearchStrategy):
             yield math.copysign(
                 sys.float_info.max, x
             )
-            if x < 0:
+            if is_negative(x):
                 yield -x
             return
 
@@ -403,12 +405,12 @@ class FloatStrategy(SearchStrategy):
         return accept
 
     def basic_simplify(self, random, x):
-        if x == 0.0:
+        if not is_negative(x) and x == 0.0:
             return
 
         yield 0.0
 
-        if x < 0:
+        if is_negative(x):
             yield -x
             for t in self.basic_simplify(random, -x):
                 yield -t

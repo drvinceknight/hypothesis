@@ -22,7 +22,7 @@ import math
 import pytest
 
 import hypothesis.strategies as st
-from hypothesis import find, given, assume
+from hypothesis import find, given, assume, Settings
 from hypothesis.internal.compat import WINDOWS
 
 
@@ -99,3 +99,13 @@ def test_half_bounded_respects_sign_of_upper_bound(x):
 @given(st.floats(min_value=0.0))
 def test_half_bounded_respects_sign_of_lower_bound(x):
     assert math.copysign(1, x) == 1
+
+
+@given(st.randoms())
+def test_simplifies_negative_zero(rnd):
+    ts = find(
+        st.lists(st.floats(), min_size=50), lambda x: sum(x) < -1,
+        random=rnd, settings=Settings(database=None)
+    )
+    zeroes = [t for t in ts if t == 0.0]
+    assert all(math.copysign(1, z) > 0 for z in zeroes), zeroes
