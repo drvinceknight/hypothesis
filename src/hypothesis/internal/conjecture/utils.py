@@ -33,7 +33,11 @@ def byte(data):
 
 
 def n_byte_signed(data, n):
-    return int.from_bytes(data.draw_bytes(n), 'big', signed=True)
+    result = int.from_bytes(data.draw_bytes(n), 'big')
+    mask = 2 ** (n * 8 - 1)
+    if result & mask:
+        result = -(result ^ mask)
+    return result
 
 
 def saturate(n):
