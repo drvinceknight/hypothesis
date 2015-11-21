@@ -115,212 +115,6 @@ class TestRunner(object):
         except RunIsComplete:
             pass
 
-    def _deletion_pass(self):
-        change_counter = -1
-        while self.changed > change_counter:
-            change_counter = self.changed
-            i = 0
-            while i < len(self.last_data.intervals):
-                u, v = self.last_data.intervals[i]
-                if not self.incorporate_new_buffer(
-                    self.last_data.buffer[:u] +
-                    self.last_data.buffer[v:]
-                ):
-                    i += 1
-            if self.changed > change_counter:
-                continue
-            i = 0
-            while i + 1 < len(self.last_data.buffer):
-                if not self.incorporate_new_buffer(
-                    self.last_data.buffer[:i] +
-                    self.last_data.buffer[i + 2:]
-                ):
-                    i += 1
-            i = 0
-            while i < len(self.last_data.buffer):
-                if not self.incorporate_new_buffer(
-                    self.last_data.buffer[:i] +
-                    self.last_data.buffer[i + 1:]
-                ):
-                    i += 1
-
-    def _lexicographic_pass(self):
-        change_counter = -1
-        while change_counter < self.changed:
-            for c in range(1, 256):
-                self.incorporate_new_buffer(bytes(
-                    0 if d == c else d
-                    for d in self.last_data.buffer
-                )) or self.incorporate_new_buffer(bytes(
-                    1 if d == c else d
-                    for d in self.last_data.buffer
-                ))
-            i = 0
-            while i < len(self.last_data.buffer):
-                self.incorporate_new_buffer(
-                    self.last_data.buffer[:i] +
-                    bytes([0]) +
-                    self.last_data.buffer[i + 1:]
-                )
-                i += 1
-            i = 0
-
-            change_counter = self.changed
-            i = 0
-            while i < len(self.last_data.intervals):
-                u, v = self.last_data.intervals[i]
-                self.incorporate_new_buffer(
-                    self.last_data.buffer[:u] +
-                    bytes(sorted(self.last_data.buffer[u:v])) +
-                    self.last_data.buffer[v:]
-                )
-                i += 1
-
-            local_changes = -1
-            while local_changes < self.changed:
-                local_changes = self.changed
-                for c in range(1, 256):
-                    buf = self.last_data.buffer
-                    if buf.count(c) > 1:
-                        if self.incorporate_new_buffer(bytes(
-                            c - 1 if b == c else b
-                            for b in buf
-                        )):
-                            buf = self.last_data.buffer
-                            for d in range(c):
-                                if self.incorporate_new_buffer(bytes(
-                                    d if b == c - 1 else b
-                                    for b in buf
-                                )):
-                                    break
-            k = 8
-            for i in range(len(self.last_data.buffer) - k):
-                buf = self.last_data.buffer
-                if i + k > len(buf):
-                    break
-                self.incorporate_new_buffer(
-                    buf[:i] + bytes(k) + buf[i + k:]
-                )
-            i = 0
-            while i < len(self.last_data.buffer):
-                buf = self.last_data.buffer
-                if not self.incorporate_new_buffer(
-                    buf[:i] + buf[i + 1:]
-                ):
-                    for c in range(buf[i]):
-                        if self.incorporate_new_buffer(
-                            buf[:i] + bytes([c]) + buf[i + 1:]
-                        ):
-                            break
-                        elif i + 1 < len(self.last_data.buffer):
-                            if self.incorporate_new_buffer(
-                                buf[:i] + bytes([c, 255]) + buf[i+2:]
-                            ):
-                                break
-                i += 1
-            i = 0
-            while i + 1 < len(self.last_data.buffer):
-                j = i + 1
-                buf = self.last_data.buffer
-                if buf[i] > buf[j]:
-                    self.incorporate_new_buffer(
-                        buf[:i] + bytes([buf[j], buf[i]]) + buf[j + 1:]
-                    )
-                i += 1
-            if self.changed > change_counter:
-                continue
-            i = 0
-            while i < len(self.last_data.buffer):
-                buf = self.last_data.buffer
-                if not self.incorporate_new_buffer(
-                    buf[:i] + buf[i + 1:]
-                ):
-                    if buf[i] == 0:
-                        buf = bytearray(buf)
-                        j = i
-                        while j >= 0:
-                            if buf[j] > 0:
-                                buf[j] -= 1
-                                self.incorporate_new_buffer(bytes(buf))
-                                break
-                            else:
-                                buf[j] = 255
-                            j -= 1
-                i += 1
-            if self.changed > change_counter:
-                continue
-            buckets = [[] for _ in range(256)]
-            for i, c in enumerate(self.last_data.buffer):
-                buckets[c].append(i)
-            indices = []
-            for bucket in buckets:
-                if len(bucket) > 1:
-                    indices.extend(
-                        (j, k)
-                        for j in bucket for k in bucket
-                        if j < k
-                    )
-            for j, k in indices:
-                buf = self.last_data.buffer
-                if k >= len(buf):
-                    continue
-                if buf[j] == buf[k]:
-                    c = buf[j]
-                    if c == 0:
-                        if j > 0 and buf[j - 1] > 0 and buf[k - 1] > 0:
-                            self.incorporate_new_buffer(
-                                buf[:j - 1] +
-                                bytes([buf[j - 1] - 1, 255]) +
-                                buf[j + 1:k - 1] +
-                                bytes([buf[k - 1] - 1, 255]) +
-                                buf[k + 1:]
-                            )
-                    c = buf[j]
-                    if c > 0:
-                        bd = bytes([c - 1])
-                        if self.incorporate_new_buffer(
-                            buf[:j] + bd + buf[j + 1:k] + bd +
-                            buf[k + 1:]
-                        ):
-                            for d in range(c - 1):
-                                buf = self.last_data.buffer
-                                bd = bytes([d])
-                                if self.incorporate_new_buffer(
-                                    buf[:j] + bd + buf[j + 1:k] + bd +
-                                    buf[k + 1:]
-                                ):
-                                    break
-
-    def _quadratic_pass(self):
-        buf = self.last_data.buffer
-        for j in range(len(buf)):
-            buf = self.last_data.buffer
-            if j >= len(buf):
-                break
-            if buf[j] == 0:
-                continue
-            for k in range(j + 1, len(buf)):
-                buf = self.last_data.buffer
-                if k >= len(buf):
-                    break
-                if buf[j] > buf[k]:
-                    self.incorporate_new_buffer(
-                        buf[:j] + bytes([buf[k]]) + buf[j + 1:k] +
-                        bytes([buf[j]]) + buf[k + 1:]
-                    )
-                buf = self.last_data.buffer
-                if k >= len(buf):
-                    break
-                if buf[j] > 0 and buf[k] > 0 and buf[j] != buf[k]:
-                    for c in range(min(buf[j], buf[k]), 0, -1):
-                        if self.incorporate_new_buffer(
-                            buf[:j] + bytes([buf[j] - c]) + buf[j + 1:k] +
-                            bytes([buf[k] - c]) + buf[k + 1:]
-                        ):
-                            break
-                if buf[j] == 0:
-                    break
-
     def _run(self):
         self.new_buffer()
         mutations = 0
@@ -339,20 +133,66 @@ class TestRunner(object):
                 )
             mutations += 1
 
-        for c in range(256):
-            if self.incorporate_new_buffer(bytes(
-                min(c, b) for b in self.last_data.buffer
-            )):
-                break
-
         change_counter = -1
         while self.changed > change_counter:
-            assert self.last_data.status == Status.INTERESTING
             change_counter = self.changed
-            self._deletion_pass()
-            self._lexicographic_pass()
-            if self.changed == change_counter:
-                self._quadratic_pass()
+            i = 0
+            while i < len(self.last_data.intervals):
+                u, v = self.last_data.intervals[i]
+                if not self.incorporate_new_buffer(
+                    self.last_data.buffer[:u] +
+                    self.last_data.buffer[v:]
+                ):
+                    i += 1
+            i = 0
+            while i < len(self.last_data.intervals):
+                u, v = self.last_data.intervals[i]
+                self.incorporate_new_buffer(
+                    self.last_data.buffer[:u] +
+                    bytes(v - u) +
+                    self.last_data.buffer[v:]
+                )
+                i += 1
+            for n in range(3):
+                for i in range(len(self.last_data.buffer)):
+                    if i >= len(self.last_data.buffer):
+                        break
+                    buf = self.last_data.buffer
+                    if buf[i] > n:
+                        self.incorporate_new_buffer(
+                            buf[:i] + bytes([n]) + buf[i+1:]
+                        )
+            i = 0
+            while i < len(self.last_data.buffer):
+                buf = self.last_data.buffer
+                if buf[i] > 0:
+                    for c in range(buf[i]):
+                        if self.incorporate_new_buffer(
+                            buf[:i] + bytes([c]) + buf[i+1:]
+                        ):
+                            break
+                        elif i + 1 < len(buf):
+                            if self.incorporate_new_buffer(
+                                buf[:i] + bytes([c, 255]) + buf[i+2:]
+                            ):
+                                break
+                i += 1
+            i = 0
+            while i < len(self.last_data.buffer):
+                counter = 0
+                j = i + 1
+                while counter < 10 and j < len(self.last_data.buffer):
+                    buf = self.last_data.buffer
+                    if buf[i] == 0:
+                        break
+                    if buf[i] == buf[j]:
+                        counter += 1
+                        self.incorporate_new_buffer(
+                            buf[:i] + bytes([buf[i] - 1]) + buf[i+1:j-1] +
+                            bytes([buf[i] - 1]) + buf[j+1:]
+                        )
+                    j += 1
+                i += 1
 
     def mutate_data_to_new_buffer(self):
         n = min(len(self.last_data.buffer), self.last_data.index)
