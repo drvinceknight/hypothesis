@@ -94,7 +94,7 @@ class TestRunner(object):
         data.freeze()
         if data.status >= self.last_data.status:
             debug_report('%r -> %r, %s' % (
-                data.buffer[:data.index], data.status,
+                list(data.buffer[:data.index]), data.status,
                 data.output.decode('utf-8'),
             ))
         if data.status >= Status.VALID:
