@@ -162,6 +162,8 @@ class TestData(object):
         return self.status == Status.INVALID or self.status == Status.OVERRUN
 
     def better_than(self, other):
+        if self.index < other.index:
+            return True
         return (
             self.interest_key1() < other.interest_key1() and
             self.interest_key2() <= other.interest_key2()
