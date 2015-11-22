@@ -281,22 +281,16 @@ def test_dictionary(dict_class):
 
 def test_minimize_single_element_in_silly_large_int_range():
     ir = integers(-(2 ** 256), 2 ** 256)
-    assert minimal(ir, lambda x: x >= -(2 ** 255)) == -(2 ** 255)
+    assert minimal(ir, lambda x: x >= -(2 ** 255)) == 0
 
 
 def test_minimize_multiple_elements_in_silly_large_int_range():
-    desired_result = [-(2 ** 255)] * 20
-
-    def condition(x):
-        assume(len(x) >= 20)
-        return all(t >= -(2 ** 255) for t in x)
+    desired_result = [0] * 20
 
     ir = integers(-(2 ** 256), 2 ** 256)
     x = minimal(
         lists(ir),
-        condition,
-        # This is quite hard and I don't yet have a good solution for
-        # making it less so, so this one gets a higher timeout.
+        lambda x: len(x) >= 20,
         timeout_after=20,
     )
     assert x == desired_result

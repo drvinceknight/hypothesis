@@ -173,7 +173,15 @@ def integers(min_value=None, max_value=None):
                     u'Cannot have max_value=%r < min_value=%r' % (
                         max_value, min_value
                     ))
-            return BoundedIntStrategy(min_value, max_value)
+            elif min_value >= 0:
+                return BoundedIntStrategy(min_value, max_value)
+            elif max_value <= 0:
+                return BoundedIntStrategy(-max_value, -min_value).map(
+                    lambda t: -t
+                )
+            else:
+                return integers(min_value=0, max_value=max_value) | \
+                    integers(min_value=min_value, max_value=0)
 
 
 @cacheable
