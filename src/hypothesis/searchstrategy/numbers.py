@@ -66,11 +66,7 @@ class RandomGeometricIntStrategy(IntStrategy):
         return u'RandomGeometricIntStrategy()'
 
     def do_draw(self, data):
-        value = d.geometric(data, 1.0 - d.fractional_float(data))
-        if d.boolean(data):
-            data.incur_cost(1)
-            value = -value
-        return value
+        return d.n_byte_signed(data, d.integer_range(data, 0, 8))
 
 
 class WideRangeIntStrategy(IntStrategy):
