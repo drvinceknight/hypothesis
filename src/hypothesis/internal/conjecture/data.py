@@ -79,7 +79,7 @@ class TestData(object):
         self.frozen = False
         self.intervals = []
         self.interval_stack = []
-        self.costs = [0] * (len(self.buffer) + 1)
+        self.total_cost = 0
         self.start_example()
 
     def __assert_not_frozen(self, name):
@@ -118,7 +118,7 @@ class TestData(object):
     def incur_cost(self, cost):
         self.__assert_not_frozen('incur_cost')
         assert not self.frozen
-        self.costs[self.index] += cost
+        self.total_cost += cost
 
     def freeze(self):
         if self.frozen:
@@ -131,7 +131,6 @@ class TestData(object):
         )
         if self.status == Status.INTERESTING:
             self.buffer = self.buffer[:self.index]
-            self.costs = self.costs[:(self.index + 1)]
 
     def draw_bytes(self, n: int) ->bytes:
         self.__assert_not_frozen('draw_bytes')
@@ -175,7 +174,11 @@ class TestData(object):
         )
 
     def interest_key2(self):
+        remapped = [TEXT_BYTE_ORDER[c] for c in self.output]
+        tally = [0] * 256
+        for c in remapped:
+            tally[c] -= 1
         return (
-            len(self.costs), self.costs,
-            len(self.output), [TEXT_BYTE_ORDER[c] for c in self.output],
+            self.total_cost,
+            len(self.output), tally, remapped,
         )

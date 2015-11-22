@@ -815,10 +815,10 @@ def find(specifier, condition, settings=None, random=None, storage=None):
             data.note(result)
             data.mark_interesting()
     from hypothesis.internal.conjecture.engine import TestRunner
-    from hypothesis.internal.conjecture.data import TestData, Status
+    from hypothesis.internal.conjecture.data import TestData
 
     runner = TestRunner(template_condition, settings=settings, random=random)
     runner.run()
-    if runner.last_data.status == Status.INTERESTING:
-        return TestData(runner.last_data.buffer).draw(search)
+    if runner.best_data is not None:
+        return TestData(runner.best_data.buffer).draw(search)
     raise NoSuchExample(get_pretty_function_description(condition))

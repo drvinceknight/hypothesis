@@ -42,6 +42,7 @@ class TestRunner(object):
         self.valid_examples = 0
         self.start_time = time.time()
         self.random = random or Random()
+        self.best_data = None
 
     def new_buffer(self):
         buffer = self.rand_bytes(self.settings.buffer_size)
@@ -74,7 +75,7 @@ class TestRunner(object):
             assert len(data.buffer) <= len(self.last_data.buffer)
             if len(data.buffer) == len(self.last_data.buffer):
                 assert data.buffer < self.last_data.buffer
-            return data.better_than(self.last_data)
+            return True
         return True
 
     def incorporate_new_buffer(self, buffer):
@@ -103,6 +104,8 @@ class TestRunner(object):
         if self.consider_new_test_data(data):
             if self.last_data.status == Status.INTERESTING:
                 self.shrinks += 1
+                if data.better_than(self.best_data):
+                    self.best_data = data
             self.last_data = data
             self.changed += 1
             if self.shrinks >= self.settings.max_shrinks:
@@ -133,6 +136,7 @@ class TestRunner(object):
                     self.mutate_data_to_new_buffer()
                 )
             mutations += 1
+        self.best_data = self.last_data
 
         change_counter = -1
         while self.changed > change_counter:
