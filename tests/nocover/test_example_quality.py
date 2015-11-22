@@ -511,3 +511,13 @@ def test_finds_non_reversible_floats():
     )
     assert len(repr(t)) <= 200
     print(t)
+
+
+@pytest.mark.parametrize('n', [0, 1, 10, 100, 1000])
+def test_containment(n):
+    iv = minimal(
+        tuples(lists(integers()), integers()),
+        lambda x: x[1] in x[0] and x[1] >= n,
+        timeout_after=60
+    )
+    assert iv == ([n], n)
