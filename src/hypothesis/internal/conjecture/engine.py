@@ -146,28 +146,58 @@ class TestRunner(object):
                 ):
                     i += 1
             i = 0
-            while i < len(self.last_data.intervals):
-                u, v = self.last_data.intervals[i]
-                self.incorporate_new_buffer(
-                    self.last_data.buffer[:u] +
-                    bytes(v - u) +
-                    self.last_data.buffer[v:]
-                )
-                i += 1
-            for n in range(3):
-                for i in range(len(self.last_data.buffer)):
-                    if i >= len(self.last_data.buffer):
-                        break
+            while i < len(self.last_data.buffer):
+                if not self.incorporate_new_buffer(
+                    self.last_data.buffer[:i] + self.last_data.buffer[i + 1:]
+                ):
+                    i += 1
+            i = 0
+            while (
+                self.changed == change_counter and
+                i < len(self.last_data.intervals)
+            ):
+                j = i + 1
+                while j < len(self.last_data.intervals):
+                    inters = self.last_data.intervals
                     buf = self.last_data.buffer
-                    if buf[i] > n:
+                    u, v = inters[i]
+                    x, y = inters[j]
+                    if (x - y) * 2 <= (v - u):
+                        break
+                    if (y - x) < (v - u) or buf[x:y] < buf[u:v]:
                         self.incorporate_new_buffer(
-                            buf[:i] + bytes([n]) + buf[i+1:]
+                            buf[:u] + buf[x:y] + buf[v:]
                         )
+                    j += 1
+                i += 1
+
+            for c in range(256):
+                buf = self.last_data.buffer
+                if buf.count(c) > 1:
+                    for d in _byte_shrinks(c):
+                        if self.incorporate_new_buffer(bytes(
+                            d if b == c else b for b in buf
+                        )):
+                            break
+
+            for c in range(256):
+                if c >= max(self.last_data.buffer):
+                    break
+                local_change_counter = -1
+                while local_change_counter < self.changed:
+                    local_change_counter = self.changed
+                    i = 0
+                    while i < len(self.last_data.buffer):
+                        buf = self.last_data.buffer
+                        if buf[i] > c:
+                            self.incorporate_new_buffer(
+                                buf[:i] + bytes([c]) + buf[i+1:])
+                        i += 1
             i = 0
             while i < len(self.last_data.buffer):
                 buf = self.last_data.buffer
                 if buf[i] > 0:
-                    for c in range(buf[i]):
+                    for c in _byte_shrinks(buf[i]):
                         if self.incorporate_new_buffer(
                             buf[:i] + bytes([c]) + buf[i+1:]
                         ):
@@ -192,6 +222,35 @@ class TestRunner(object):
                             buf[:i] + bytes([buf[i] - 1]) + buf[i+1:j-1] +
                             bytes([buf[i] - 1]) + buf[j+1:]
                         )
+                    j += 1
+                i += 1
+            i = 0
+            while i < len(self.last_data.buffer):
+                counter = 0
+                j = i + 1
+                while counter < 10 and j < len(self.last_data.buffer):
+                    buf = self.last_data.buffer
+                    if buf[i] == 0:
+                        break
+                    if buf[j] == buf[i]:
+                        counter += 1
+                        for c in _byte_shrinks(buf[i]):
+                            if self.incorporate_new_buffer(
+                                buf[:i] + bytes([c]) + buf[i+1:j] +
+                                bytes([c]) + buf[j+1:]
+                            ):
+                                break
+                        else:
+                            if (
+                                i + 1 < j and j + 1 < len(buf) and
+                                buf[i + 1] == buf[j + 1] == 0
+                            ):
+                                buf = bytearray(buf)
+                                buf[i] -= 1
+                                buf[j] -= 1
+                                buf[i + 1] = 255
+                                buf[j + 1] = 255
+                                self.incorporate_new_buffer(bytes(buf))
                     j += 1
                 i += 1
 
@@ -250,3 +309,16 @@ def find_interesting_buffer(test_function, settings=None):
     runner.run()
     if runner.last_data.status == Status.INTERESTING:
         return runner.last_data.buffer
+
+
+def _byte_shrinks(n):
+    if n == 0:
+        return []
+    if n == 1:
+        return [0]
+    parts = {0, n - 1}
+    for i in range(8):
+        mask = 1 << i
+        if n & mask:
+            parts.add(n ^ mask)
+    return sorted(parts)
