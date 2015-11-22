@@ -33,8 +33,10 @@ def byte(data):
 
 
 def n_byte_signed(data, n):
+    if n == 0:
+        return 0
     result = int.from_bytes(data.draw_bytes(n), 'big')
-    mask = 2 ** (n * 8 - 1)
+    mask = 1 << (n * 8 - 1)
     if result & mask:
         result = -(result ^ mask)
     return result
