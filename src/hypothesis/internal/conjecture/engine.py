@@ -93,7 +93,8 @@ class TestRunner(object):
         self.test_function(data)
         data.freeze()
         if data.status >= self.last_data.status:
-            debug_report('%r -> %r, %s' % (
+            debug_report('%d bytes %r -> %r, %s' % (
+                data.index,
                 list(data.buffer[:data.index]), data.status,
                 data.output.decode('utf-8'),
             ))
