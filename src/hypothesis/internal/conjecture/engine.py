@@ -274,7 +274,7 @@ class TestRunner(object):
             return bytes(result)
 
         probe = self.random.randint(0, 255)
-        if probe <= 200 or len(self.last_data.intervals) <= 1:
+        if probe <= 100 or len(self.last_data.intervals) <= 1:
             c = self.random.randint(0, 2)
             i = self.random.randint(0, self.last_data.index - 1)
             result = bytearray(self.last_data.buffer)
