@@ -25,6 +25,7 @@ from hypothesis.internal.compat import hunichr, text_type, binary_type, hrange
 from hypothesis.searchstrategy.strategies import SearchStrategy, \
     MappedSearchStrategy
 from hypothesis.internal.conjecture import utils as d
+from hypothesis.internal.conjecture.data import CHR_ORDER
 
 
 class OneCharStringStrategy(SearchStrategy):
@@ -71,7 +72,10 @@ class OneCharStringStrategy(SearchStrategy):
 
     def do_draw(self, data):
         interval = d.choice(data, self.intervals)
-        return hunichr(d.integer_range(data, *interval))
+        i = d.integer_range(data, *interval)
+        if i < 127:
+            return CHR_ORDER[i]
+        return hunichr(i)
 
     def is_good(self, char):
         if char in self.blacklist_characters:
