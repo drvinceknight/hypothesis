@@ -106,10 +106,10 @@ class TestRunner(object):
                 self.shrinks += 1
                 if data.better_than(self.best_data):
                     self.best_data = data
+                if self.shrinks >= self.settings.max_shrinks:
+                    raise RunIsComplete()
             self.last_data = data
             self.changed += 1
-            if self.shrinks >= self.settings.max_shrinks:
-                raise RunIsComplete()
             return True
         return False
 
