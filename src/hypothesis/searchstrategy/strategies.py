@@ -118,12 +118,12 @@ class SearchStrategy(object):
         from hypothesis.settings import Settings
         try:
             return find(
+                self,
                 lambda x: True,
                 random=random,
                 settings=Settings(
                     max_shrinks=0,
-                    max_iterations=100,
-                    max_mutations=5,
+                    max_iterations=1000,
                 )
             )
         except NoSuchExample:
