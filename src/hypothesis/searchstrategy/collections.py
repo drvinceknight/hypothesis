@@ -106,19 +106,22 @@ class ListStrategy(SearchStrategy):
 
     def do_draw(self, data):
         stopping_value = 255 - d.byte(data)
+        duplication_rate = d.byte(data)
         result = []
         while len(result) < self.max_size:
             data.start_example()
             probe = d.byte(data)
             if probe <= stopping_value:
                 if len(result) < self.min_size:
-                    data.draw(self.element_strategy)
                     data.stop_example()
                     continue
                 else:
                     data.stop_example()
                     break
-            result.append(data.draw(self.element_strategy))
+            if result and d.byte(data) <= duplication_rate:
+                result.append(d.choice(data, result))
+            else:
+                result.append(data.draw(self.element_strategy))
             data.stop_example()
         data.incur_cost(len(result))
         return result
