@@ -17,7 +17,6 @@
 from __future__ import division, print_function, absolute_import
 
 import sys
-import math
 import struct
 from collections import namedtuple
 
@@ -137,19 +136,12 @@ class FloatStrategy(SearchStrategy):
             # This branch ignores k but we draw it anyway so we can simplify
             # into it if we make it out of this branch.
             f = NASTY_FLOATS[31 - branch & 31]
-            data.incur_cost(100)
         elif branch >= 201:
             f = float(k)
             if branch < 230:
                 f = -f
         else:
             f = struct.unpack(b'!d', struct.pack(b'!Q', k))[0]
-        if math.isinf(f):
-            data.incur_cost(2)
-        elif math.isnan(f):
-            data.incur_cost(10)
-        elif 0 < abs(f) < 1:
-            data.incur_cost(1)
         return f
 
 

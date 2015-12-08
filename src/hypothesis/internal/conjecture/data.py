@@ -80,7 +80,6 @@ class TestData(object):
         self.frozen = False
         self.intervals = []
         self.interval_stack = []
-        self.total_cost = 0
         self.start_example()
 
     def __assert_not_frozen(self, name):
@@ -115,11 +114,6 @@ class TestData(object):
             t = (k, self.index)
             if not self.intervals or self.intervals[-1] != t:
                 self.intervals.append(t)
-
-    def incur_cost(self, cost):
-        self.__assert_not_frozen('incur_cost')
-        assert not self.frozen
-        self.total_cost += cost
 
     def freeze(self):
         if self.frozen:

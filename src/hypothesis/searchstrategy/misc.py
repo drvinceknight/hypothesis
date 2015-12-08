@@ -32,10 +32,7 @@ class BoolStrategy(SearchStrategy):
         return u'BoolStrategy()'
 
     def do_draw(self, data):
-        result = d.boolean(data)
-        if result:
-            data.incur_cost(2)
-        return result
+        return d.boolean(data)
 
 
 class JustStrategy(SearchStrategy):

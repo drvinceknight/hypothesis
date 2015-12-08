@@ -218,7 +218,6 @@ class OneOfStrategy(SearchStrategy):
 
     def do_draw(self, data):
         i = integer_range(data, 0, len(self.element_strategies) - 1)
-        data.incur_cost(i)
         return data.draw(self.element_strategies[i])
 
     def __repr__(self):
