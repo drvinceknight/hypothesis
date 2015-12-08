@@ -130,19 +130,17 @@ class FloatStrategy(SearchStrategy):
         return u'%s()' % (self.__class__.__name__,)
 
     def do_draw(self, data):
-        branch = 255 - d.byte(data)
-        k = d.n_byte_unsigned(data, 8)
-        if branch < 32:
-            # This branch ignores k but we draw it anyway so we can simplify
-            # into it if we make it out of this branch.
-            f = NASTY_FLOATS[31 - branch & 31]
-        elif branch >= 201:
-            f = float(k)
-            if branch < 230:
-                f = -f
-        else:
-            f = struct.unpack(b'!d', struct.pack(b'!Q', k))[0]
-        return f
+        def draw_float_bytes(random, n):
+            assert n == 8
+            i = random.randint(1, 10)
+            if i == 1:
+                f = random.choice(NASTY_FLOATS)
+            elif i <= 3:
+                f = random.random() * 2 - 1.0
+            else:
+                return bytes(random.randint(0, 255) for _ in range(8))
+            return struct.pack(b'!d', f)
+        return struct.unpack(b'!d', data.draw_bytes(8, draw_float_bytes))[0]
 
 
 def compose_float(sign, exponent, fraction):
