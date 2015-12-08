@@ -55,6 +55,12 @@ assert len(TEXT_BYTE_ORDER) == 256
 assert sorted(TEXT_BYTE_ORDER) == list(range(256))
 
 
+def uniform(random, n):
+    if n == 0:
+        return b''
+    return random.getrandbits(n * 8).to_bytes(n, 'big')
+
+
 class Status(IntEnum):
     OVERRUN = 0
     INVALID = 1
@@ -71,9 +77,13 @@ class StopTest(BaseException):
 
 class TestData(object):
 
-    def __init__(self, buffer: bytes):
-        assert isinstance(buffer, bytes)
-        self.buffer = buffer
+    def __init__(self, buffer=None, random=None, build_up_to=-1):
+        assert (buffer is None) != (random is None)
+        if buffer is None:
+            self.buffer = bytearray()
+        else:
+            assert isinstance(buffer, bytes)
+            self.buffer = buffer
         self.output = bytearray()
         self.index = 0
         self.status = Status.VALID
@@ -81,6 +91,8 @@ class TestData(object):
         self.intervals = []
         self.interval_stack = []
         self.start_example()
+        self.random = random
+        self.build_up_to = build_up_to
 
     def __assert_not_frozen(self, name):
         if self.frozen:
@@ -126,16 +138,28 @@ class TestData(object):
         )
         if self.status == Status.INTERESTING:
             self.buffer = self.buffer[:self.index]
+        if isinstance(self.buffer, bytearray):
+            self.buffer = bytes(self.buffer)
+            self.random = None
+            self.build_up_to = -1
 
-    def draw_bytes(self, n: int) ->bytes:
+    def draw_bytes(self, n, distribution=uniform):
         self.__assert_not_frozen('draw_bytes')
+        build_mode = self.random is not None
+        if build_mode:
+            assert self.index == len(self.buffer)
+            assert isinstance(self.buffer, bytearray)
         self.index += n
-        if self.index > len(self.buffer):
+        if self.index > max(len(self.buffer), self.build_up_to):
             self.status = Status.OVERRUN
             self.freeze()
             raise StopTest(self)
         self.intervals.append((self.index - n, self.index))
-        result = self.buffer[self.index - n:self.index]
+        if build_mode:
+            result = distribution(self.random, n)
+            self.buffer.extend(result)
+        else:
+            result = self.buffer[self.index - n:self.index]
         assert len(result) == n
         return result
 
