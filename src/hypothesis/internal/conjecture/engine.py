@@ -42,7 +42,6 @@ class TestRunner(object):
         self.valid_examples = 0
         self.start_time = time.time()
         self.random = random or Random()
-        self.best_data = None
 
     def new_buffer(self):
         buffer = self.rand_bytes(self.settings.buffer_size)
@@ -104,8 +103,7 @@ class TestRunner(object):
         if self.consider_new_test_data(data):
             if self.last_data.status == Status.INTERESTING:
                 self.shrinks += 1
-                if data.better_than(self.best_data):
-                    self.best_data = data
+                self.last_data = data
                 if self.shrinks >= self.settings.max_shrinks:
                     raise RunIsComplete()
             self.last_data = data
@@ -136,7 +134,6 @@ class TestRunner(object):
                     self.mutate_data_to_new_buffer()
                 )
             mutations += 1
-        self.best_data = self.last_data
 
         change_counter = -1
         while self.changed > change_counter:
@@ -195,7 +192,7 @@ class TestRunner(object):
                         buf = self.last_data.buffer
                         if buf[i] > c:
                             self.incorporate_new_buffer(
-                                buf[:i] + bytes([c]) + buf[i+1:])
+                                buf[:i] + bytes([c]) + buf[i + 1:])
                         i += 1
             i = 0
             while i < len(self.last_data.buffer):
@@ -203,12 +200,12 @@ class TestRunner(object):
                 if buf[i] > 0:
                     for c in _byte_shrinks(buf[i]):
                         if self.incorporate_new_buffer(
-                            buf[:i] + bytes([c]) + buf[i+1:]
+                            buf[:i] + bytes([c]) + buf[i + 1:]
                         ):
                             break
                         elif i + 1 < len(buf):
                             if self.incorporate_new_buffer(
-                                buf[:i] + bytes([c, 255]) + buf[i+2:]
+                                buf[:i] + bytes([c, 255]) + buf[i + 2:]
                             ):
                                 break
                 i += 1
@@ -223,8 +220,8 @@ class TestRunner(object):
                     if buf[i] == buf[j]:
                         counter += 1
                         self.incorporate_new_buffer(
-                            buf[:i] + bytes([buf[i] - 1]) + buf[i+1:j-1] +
-                            bytes([buf[i] - 1]) + buf[j+1:]
+                            buf[:i] + bytes([buf[i] - 1]) + buf[i + 1:j - 1] +
+                            bytes([buf[i] - 1]) + buf[j + 1:]
                         )
                     j += 1
                 i += 1
@@ -240,8 +237,8 @@ class TestRunner(object):
                         counter += 1
                         for c in _byte_shrinks(buf[i]):
                             if self.incorporate_new_buffer(
-                                buf[:i] + bytes([c]) + buf[i+1:j] +
-                                bytes([c]) + buf[j+1:]
+                                buf[:i] + bytes([c]) + buf[i + 1:j] +
+                                bytes([c]) + buf[j + 1:]
                             ):
                                 break
                         else:

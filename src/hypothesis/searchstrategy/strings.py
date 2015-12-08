@@ -21,11 +21,12 @@ import unicodedata
 
 from hypothesis.errors import InvalidArgument
 from hypothesis.internal import charstree
-from hypothesis.internal.compat import hunichr, text_type, binary_type, hrange
-from hypothesis.searchstrategy.strategies import SearchStrategy, \
-    MappedSearchStrategy
+from hypothesis.internal.compat import hrange, hunichr, text_type, \
+    binary_type
 from hypothesis.internal.conjecture import utils as d
 from hypothesis.internal.conjecture.data import CHR_ORDER
+from hypothesis.searchstrategy.strategies import SearchStrategy, \
+    MappedSearchStrategy
 
 
 class OneCharStringStrategy(SearchStrategy):
@@ -67,7 +68,7 @@ class OneCharStringStrategy(SearchStrategy):
                 assert i == intervals[-1][-1] + 1
                 intervals[-1][-1] += 1
         if not intervals:
-            raise InvalidArgument("Empty set of allowed characters")
+            raise InvalidArgument('Empty set of allowed characters')
         self.intervals = intervals
 
     def do_draw(self, data):

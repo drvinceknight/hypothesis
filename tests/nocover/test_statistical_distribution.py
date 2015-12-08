@@ -34,13 +34,13 @@ import collections
 
 import pytest
 
-from hypothesis.settings import Settings
-from hypothesis.internal.conjecture.engine import TestRunner
 import hypothesis.internal.reflection as reflection
 from hypothesis.errors import UnsatisfiedAssumption
+from hypothesis.settings import Settings
 from hypothesis.strategies import just, sets, text, lists, floats, \
     tuples, booleans, integers, sampled_from
 from hypothesis.internal.compat import PY26, hrange
+from hypothesis.internal.conjecture.engine import TestRunner
 
 pytestmark = pytest.mark.skipif(PY26, reason=u'2.6 lacks erf')
 

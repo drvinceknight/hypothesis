@@ -22,7 +22,7 @@ import struct
 from collections import namedtuple
 
 import hypothesis.internal.conjecture.utils as d
-from hypothesis.internal.floats import int_to_float, sign, float_to_int
+from hypothesis.internal.floats import sign, float_to_int, int_to_float
 from hypothesis.searchstrategy.misc import SampledFromStrategy
 from hypothesis.searchstrategy.strategies import SearchStrategy, \
     MappedSearchStrategy
@@ -62,6 +62,7 @@ class RandomGeometricIntStrategy(IntStrategy):
     the small.
 
     """
+
     def __repr__(self):
         return u'RandomGeometricIntStrategy()'
 

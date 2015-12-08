@@ -17,8 +17,9 @@
 from __future__ import division, print_function, absolute_import
 
 from enum import IntEnum
-from hypothesis.internal.compat import text_type, binary_type
+
 from hypothesis.errors import Frozen
+from hypothesis.internal.compat import text_type, binary_type
 
 # We want to determine whether given two outputs of the same length one of them
 # is "better" than the other for the purpose of simplification. Bytewise order
@@ -89,7 +90,7 @@ class TestData(object):
                     name,))
 
     def note(self, value):
-        self.__assert_not_frozen("note")
+        self.__assert_not_frozen('note')
         if not isinstance(value, (text_type, binary_type)):
             value = repr(value)
         if isinstance(value, text_type):
@@ -159,26 +160,3 @@ class TestData(object):
     @property
     def rejected(self):
         return self.status == Status.INVALID or self.status == Status.OVERRUN
-
-    def better_than(self, other):
-        if self.index < other.index:
-            return True
-        return (
-            self.interest_key1() < other.interest_key1() and
-            self.interest_key2() <= other.interest_key2()
-        )
-
-    def interest_key1(self):
-        return (
-            len(self.buffer), self.buffer,
-        )
-
-    def interest_key2(self):
-        remapped = [TEXT_BYTE_ORDER[c] for c in self.output]
-        tally = [0] * 256
-        for c in remapped:
-            tally[c] -= 1
-        return (
-            self.total_cost,
-            len(self.output), tally, remapped,
-        )

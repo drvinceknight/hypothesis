@@ -19,8 +19,6 @@ from __future__ import division, print_function, absolute_import
 import math
 from decimal import Decimal
 
-from hypothesis.internal.floats import int_to_float, float_to_int, \
-    is_negative, count_between_floats
 from hypothesis.errors import InvalidArgument
 from hypothesis.control import assume
 from hypothesis.settings import Settings
@@ -28,6 +26,8 @@ from hypothesis.searchstrategy import SearchStrategy
 from hypothesis.internal.compat import ArgSpec, text_type, getargspec, \
     integer_types, float_to_decimal, unicode_safe_repr
 from hypothesis.internal.reflection import proxies
+from hypothesis.internal.floats import is_negative, float_to_int, \
+    int_to_float, count_between_floats
 from hypothesis.searchstrategy.reprwrapper import ReprWrapperStrategy
 
 __all__ = [
