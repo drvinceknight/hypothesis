@@ -361,7 +361,10 @@ def lists(
                 if max_size <= 5:
                     average_size = min_size + 0.75 * (max_size - min_size)
                 else:
-                    average_size = (max_size + min_size) / 2
+                    average_size = min(
+                        (max_size + min_size) / 2,
+                        Settings.default.average_list_length * 2,
+                    )
             else:
                 average_size = max(
                     Settings.default.average_list_length,
@@ -386,8 +389,10 @@ def lists(
         if max_size is None:
             average_size = Settings.default.average_list_length
         else:
-            average_size = (min_size + max_size) * 0.5
-
+            average_size = min(
+                (max_size + min_size) / 2,
+                Settings.default.average_list_length * 2,
+            )
     if elements is None or (max_size is not None and max_size <= 0):
         if max_size is None or max_size > 0:
             raise InvalidArgument(

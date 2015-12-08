@@ -23,6 +23,7 @@ import pytest
 
 from flaky import flaky
 from hypothesis import find, given, Settings
+from hypothesis.errors import NoSuchExample
 from hypothesis.strategies import sets, text, lists, builds, tuples, \
     booleans, integers, frozensets, dictionaries, fixed_dictionaries
 from hypothesis.internal.debug import minimal
@@ -271,3 +272,15 @@ def test_can_find_sets_unique_by_incomplete_data():
     assert sorted(list(map(max, ls))) == list(range(10))
     for v in ls:
         assert 0 in v
+
+
+@pytest.mark.parametrize(
+    'unique', [None, False, True],
+)
+def test_large_upper_bound_does_not_lead_to_large_lists(unique):
+    with pytest.raises(NoSuchExample):
+        find(
+            lists(integers(), max_size=1000000, unique=unique),
+            lambda x: len(x) >= 1000,
+            settings=Settings(database=None, max_examples=1000)
+        )
