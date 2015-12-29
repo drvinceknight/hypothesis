@@ -349,6 +349,19 @@ class TestRunner(object):
                                 self.incorporate_new_buffer(bytes(buf))
                     j += 1
                 i += 1
+            i = 0
+            while i < len(self.last_data.intervals):
+                j = i + 1
+                while j < len(self.last_data.intervals):
+                    u, v = self.last_data.intervals[i]
+                    a, b = self.last_data.intervals[j]
+                    buf = self.last_data.buffer
+                    if b - a < v - u:
+                        self.incorporate_new_buffer(
+                            buf[:u] + buf[a:b] + buf[v:]
+                        )
+                    j += 1
+                i += 1
 
     def mutate_data_to_new_buffer(self):
         n = min(len(self.last_data.buffer), self.last_data.index)
