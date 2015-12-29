@@ -142,15 +142,25 @@ class TestRunner(object):
             return _draw_successor(self.random, existing)
 
         def reuse_existing(data, n, distribution):
-            try:
-                i = self.random.choice(self.last_data.block_starts[n])
+            choices = data.block_starts.get(n, []) or \
+                self.last_data.block_starts.get(n, [])
+            if choices:
+                i = self.random.choice(choices)
                 return self.last_data.buffer[i:i + n]
-            except KeyError:
+            else:
                 return distribution(self.random, n)
+
+        def flip_bit(data, n, distribution):
+            buf = bytearray(
+                self.last_data.buffer[data.index:data.index + n])
+            i = self.random.randint(0, n - 1)
+            k = self.random.randint(0, 7)
+            buf[i] ^= (1 << k)
+            return bytes(buf)
 
         options = [
             draw_new, draw_existing, draw_smaller, draw_larger,
-            reuse_existing,
+            reuse_existing, flip_bit,
         ]
 
         bits = [
