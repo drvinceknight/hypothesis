@@ -39,6 +39,7 @@ class TestRunner(object):
         self.changed = 0
         self.shrinks = 0
         self.examples_considered = 0
+        self.iterations = 0
         self.valid_examples = 0
         self.start_time = time.time()
         self.random = random or Random()
@@ -180,6 +181,10 @@ class TestRunner(object):
         mutations = 0
         mutator = self._new_mutator()
         while self.last_data.status != Status.INTERESTING:
+            if self.examples_considered >= self.settings.max_examples:
+                return
+            if self.iterations >= self.settings.max_iterations:
+                return
             if mutations >= self.settings.max_mutations:
                 mutations = 0
                 self.new_buffer()
@@ -191,6 +196,9 @@ class TestRunner(object):
                 )
                 self.test_function(data)
                 data.freeze()
+                self.iterations += 1
+                if data.status >= Status.VALID:
+                    self.examples_considered += 1
                 if data.status >= self.last_data.status:
                     self.last_data = data
                     if data.status > self.last_data.status:
