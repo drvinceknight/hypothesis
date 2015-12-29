@@ -120,6 +120,10 @@ class TestRunner(object):
             self._run()
         except RunIsComplete:
             pass
+        debug_report(
+            'Run complete after %d valid examples and %d shrinks' % (
+                self.valid_examples, self.shrinks,
+            ))
 
     def _new_mutator(self):
         def draw_new(data, n, distribution):
