@@ -120,22 +120,66 @@ class TestRunner(object):
         except RunIsComplete:
             pass
 
+    def _new_mutator(self):
+        def draw_new(data, n, distribution):
+            return distribution(self.random, n)
+
+        def draw_existing(data, n, distribution):
+            return self.last_data.buffer[data.index:data.index + n]
+
+        def draw_smaller(data, n, distribution):
+            existing = self.last_data.buffer[data.index:data.index + n]
+            r = distribution(self.random, n)
+            if r <= existing:
+                return r
+            return _draw_predecessor(self.random, existing)
+
+        def draw_larger(data, n, distribution):
+            existing = self.last_data.buffer[data.index:data.index + n]
+            r = distribution(self.random, n)
+            if r >= existing:
+                return r
+            return _draw_successor(self.random, existing)
+
+        options = [
+            draw_new, draw_existing, draw_smaller, draw_larger,
+        ]
+
+        bits = [
+            self.random.choice(options) for _ in range(3)
+        ]
+
+        def draw_mutated(data, n, distribution):
+            if (
+                data.index + n > len(self.last_data.buffer)
+            ):
+                return distribution(self.random, n)
+            return self.random.choice(bits)(data, n, distribution)
+        return draw_mutated
+
     def _run(self):
         self.new_buffer()
         mutations = 0
+        mutator = self._new_mutator()
         while self.last_data.status != Status.INTERESTING:
-            if (
-                self.valid_examples >= self.settings.max_examples or
-                self.examples_considered >= self.settings.max_iterations
-            ):
-                return
             if mutations >= self.settings.max_mutations:
                 mutations = 0
                 self.new_buffer()
+                mutator = self._new_mutator()
             else:
-                self.incorporate_new_buffer(
-                    self.mutate_data_to_new_buffer()
+                data = TestData(
+                    draw_bytes=mutator,
+                    max_length=self.settings.buffer_size
                 )
+                self.test_function(data)
+                data.freeze()
+                if data.status >= self.last_data.status:
+                    self.last_data = data
+                    if data.status > self.last_data.status:
+                        mutations = 0
+                else:
+                    mutator = self._new_mutator()
+
             mutations += 1
 
         change_counter = -1
@@ -326,3 +370,31 @@ def _byte_shrinks(n):
         if n & mask:
             parts.add(n ^ mask)
     return sorted(parts)
+
+
+def _draw_predecessor(rnd, xs):
+    r = bytearray()
+    any_strict = False
+    for x in xs:
+        if not any_strict:
+            c = rnd.randint(0, x)
+            if c < x:
+                any_strict = True
+        else:
+            c = rnd.randint(0, 255)
+        r.append(c)
+    return bytes(r)
+
+
+def _draw_successor(rnd, xs):
+    r = bytearray()
+    any_strict = False
+    for x in xs:
+        if not any_strict:
+            c = rnd.randint(x, 255)
+            if c > x:
+                any_strict = True
+        else:
+            c = rnd.randint(0, 255)
+        r.append(c)
+    return bytes(r)
