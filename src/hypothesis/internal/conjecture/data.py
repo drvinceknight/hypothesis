@@ -56,6 +56,7 @@ class TestData(object):
         self.max_length = max_length
         self._draw_bytes = draw_bytes
 
+        self.block_starts = {}
         self.buffer = bytearray()
         self.output = bytearray()
         self.status = Status.VALID
@@ -118,6 +119,7 @@ class TestData(object):
             self.status = Status.OVERRUN
             self.freeze()
             raise StopTest(self)
+        self.block_starts.setdefault(n, []).append(initial)
         result = self._draw_bytes(self, n, distribution)
         assert len(result) == n
         assert self.index == initial

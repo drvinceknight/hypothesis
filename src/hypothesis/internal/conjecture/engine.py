@@ -141,8 +141,16 @@ class TestRunner(object):
                 return r
             return _draw_successor(self.random, existing)
 
+        def reuse_existing(data, n, distribution):
+            try:
+                i = self.random.choice(self.last_data.block_starts[n])
+                return self.last_data.buffer[i:i + n]
+            except KeyError:
+                return distribution(self.random, n)
+
         options = [
             draw_new, draw_existing, draw_smaller, draw_larger,
+            reuse_existing,
         ]
 
         bits = [
