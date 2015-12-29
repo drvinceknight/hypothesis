@@ -392,6 +392,14 @@ def lists(
     condition that for i != j, unique_by(result[i]) != unique_by(result[j]).
 
     """
+    if elements is None or (max_size is not None and max_size <= 0):
+        if max_size is None or max_size > 0:
+            raise InvalidArgument(
+                u'Cannot create non-empty lists without an element type'
+            )
+        else:
+            return builds(list)
+
     if unique:
         if unique_by is not None:
             raise InvalidArgument((
@@ -439,19 +447,11 @@ def lists(
         else:
             average_size = (min_size + max_size) * 0.5
 
-    if elements is None or (max_size is not None and max_size <= 0):
-        if max_size is None or max_size > 0:
-            raise InvalidArgument(
-                u'Cannot create non-empty lists without an element type'
-            )
-        else:
-            return ListStrategy(())
-    else:
-        check_strategy(elements)
-        return ListStrategy(
-            (elements,), average_length=average_size,
-            min_size=min_size, max_size=max_size,
-        )
+    check_strategy(elements)
+    return ListStrategy(
+        (elements,), average_length=average_size,
+        min_size=min_size, max_size=max_size,
+    )
 
 
 @cacheable

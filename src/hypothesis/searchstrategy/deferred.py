@@ -76,7 +76,10 @@ class DeferredStrategy(SearchStrategy):
         return self.__wrapped_strategy
 
     def validate(self):
-        self.wrapped_strategy.validate()
+        w = self.wrapped_strategy
+        assert isinstance(w, SearchStrategy), \
+            "%r returned non-strategy %r" % (self, w)
+        w.validate()
 
     @property
     def template_upper_bound(self):

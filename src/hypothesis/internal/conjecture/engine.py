@@ -116,14 +116,15 @@ class TestRunner(object):
         return False
 
     def run(self):
-        try:
-            self._run()
-        except RunIsComplete:
-            pass
-        debug_report(
-            'Run complete after %d valid examples and %d shrinks' % (
-                self.valid_examples, self.shrinks,
-            ))
+        with self.settings:
+            try:
+                self._run()
+            except RunIsComplete:
+                pass
+            debug_report(
+                'Run complete after %d valid examples and %d shrinks' % (
+                    self.valid_examples, self.shrinks,
+                ))
 
     def _new_mutator(self):
         def draw_new(data, n, distribution):
@@ -183,11 +184,17 @@ class TestRunner(object):
     def _run(self):
         self.new_buffer()
         mutations = 0
+        start_time = time.time()
         mutator = self._new_mutator()
         while self.last_data.status != Status.INTERESTING:
-            if self.examples_considered >= self.settings.max_examples:
+            if self.valid_examples >= self.settings.max_examples:
                 return
             if self.iterations >= self.settings.max_iterations:
+                return
+            if (
+                self.settings.timeout > 0 and
+                time.time() >= start_time + self.settings.timeout
+            ):
                 return
             if mutations >= self.settings.max_mutations:
                 mutations = 0
@@ -202,7 +209,7 @@ class TestRunner(object):
                 data.freeze()
                 self.iterations += 1
                 if data.status >= Status.VALID:
-                    self.examples_considered += 1
+                    self.valid_examples += 1
                 if data.status >= self.last_data.status:
                     self.last_data = data
                     if data.status > self.last_data.status:
@@ -211,6 +218,17 @@ class TestRunner(object):
                     mutator = self._new_mutator()
 
             mutations += 1
+
+        if self.settings.max_shrinks <= 0:
+            return
+
+        if not self.last_data.buffer:
+            return
+
+        data = TestData.for_buffer(self.last_data.buffer)
+        self.test_function(data)
+        if data.status != Status.INTERESTING:
+            return
 
         change_counter = -1
         while self.changed > change_counter:

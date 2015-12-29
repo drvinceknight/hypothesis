@@ -275,7 +275,7 @@ def test_errors_even_if_does_not_error_on_final_call():
     @given(integers())
     def rude(x):
         assert not any(
-            t[3] == u'best_satisfying_template'
+            t[3] == u'test_function'
             for t in inspect.getouterframes(inspect.currentframe())
         )
 
@@ -307,7 +307,7 @@ def test_reports_repr_diff_in_flaky_error():
     @given(builds(DifferentReprEachTime))
     def rude(x):
         assert not any(
-            t[3] == u'best_satisfying_template'
+            t[3] == u'test_function'
             for t in inspect.getouterframes(inspect.currentframe())
         )
 
@@ -574,18 +574,6 @@ def test_when_set_to_no_simplifies_runs_failing_example_twice():
 @given(integers(), settings=Settings(max_examples=1))
 def test_should_not_fail_if_max_examples_less_than_min_satisfying(x):
     pass
-
-
-def test_should_not_count_duplicates_towards_max_examples():
-    seen = set()
-
-    @given(integers(1, 10), settings=Settings(
-        max_examples=9
-    ))
-    def test_i_see_you(x):
-        seen.add(x)
-    test_i_see_you()
-    assert len(seen) == 9
 
 
 def nameless_const(x):

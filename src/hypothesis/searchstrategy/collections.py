@@ -145,7 +145,7 @@ class UniqueListStrategy(SearchStrategy):
         self.key = key
 
     def validate(self):
-        self.elements.validate()
+        self.element_strategy.validate()
 
     Parameter = namedtuple(
         u'Parameter', (u'parameter_seed', u'parameter')
