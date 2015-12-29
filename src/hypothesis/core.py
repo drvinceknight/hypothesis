@@ -820,5 +820,5 @@ def find(specifier, condition, settings=None, random=None, storage=None):
     runner = TestRunner(template_condition, settings=settings, random=random)
     runner.run()
     if runner.last_data.status == Status.INTERESTING:
-        return TestData(runner.last_data.buffer).draw(search)
+        return TestData.for_buffer(runner.last_data.buffer).draw(search)
     raise NoSuchExample(get_pretty_function_description(condition))

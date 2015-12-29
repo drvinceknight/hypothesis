@@ -24,9 +24,28 @@ from hypothesis.internal import charstree
 from hypothesis.internal.compat import hrange, hunichr, text_type, \
     binary_type
 from hypothesis.internal.conjecture import utils as d
-from hypothesis.internal.conjecture.data import CHR_ORDER
 from hypothesis.searchstrategy.strategies import SearchStrategy, \
     MappedSearchStrategy
+
+CHR_ORDER = [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G', 'g',
+    'H', 'h', 'I', 'i', 'J', 'j', 'K', 'k', 'L', 'l', 'M', 'm', 'N', 'n',
+    'O', 'o', 'P', 'p', 'Q', 'q', 'R', 'r', 'S', 's', 'T', 't', 'U', 'u',
+    'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z',
+    ' ',
+    '_', '-', '=', '~',
+    '"', "'",
+    ':', ';', ',', '.', '?', '!',
+    '(', ')', '{', '}', '[', ']', '<', '>',
+    '*', '+', '/', '&', '|', '%',
+    '#', '$', '@',  '\\', '^', '`',
+    '\t', '\n', '\r',
+    '\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08',
+    '\x0b', '\x0c', '\x0e', '\x0f', '\x10', '\x11', '\x12', '\x13', '\x14',
+    '\x15', '\x16', '\x17', '\x18', '\x19', '\x1a', '\x1b', '\x1c', '\x1d',
+    '\x1e', '\x1f',
+]
 
 
 class OneCharStringStrategy(SearchStrategy):

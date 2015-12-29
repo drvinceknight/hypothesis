@@ -21,39 +21,6 @@ from enum import IntEnum
 from hypothesis.errors import Frozen
 from hypothesis.internal.compat import text_type, binary_type
 
-# We want to determine whether given two outputs of the same length one of them
-# is "better" than the other for the purpose of simplification. Bytewise order
-# is not a good way to do this because it would e.g. put control characters
-# first. Once we've done that, we might as well start reordering stuff
-# according to my personal whims and prejudices. So this is the "canonical"
-# order of ASCII in conjecture land according to Word of God. Fight me.
-CHR_ORDER = [
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-    'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G', 'g',
-    'H', 'h', 'I', 'i', 'J', 'j', 'K', 'k', 'L', 'l', 'M', 'm', 'N', 'n',
-    'O', 'o', 'P', 'p', 'Q', 'q', 'R', 'r', 'S', 's', 'T', 't', 'U', 'u',
-    'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z',
-    ' ',
-    '_', '-', '=', '~',
-    '"', "'",
-    ':', ';', ',', '.', '?', '!',
-    '(', ')', '{', '}', '[', ']', '<', '>',
-    '*', '+', '/', '&', '|', '%',
-    '#', '$', '@',  '\\', '^', '`',
-    '\t', '\n', '\r',
-    '\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08',
-    '\x0b', '\x0c', '\x0e', '\x0f', '\x10', '\x11', '\x12', '\x13', '\x14',
-    '\x15', '\x16', '\x17', '\x18', '\x19', '\x1a', '\x1b', '\x1c', '\x1d',
-    '\x1e', '\x1f',
-]
-
-TEXT_BYTE_ORDER = [0] * len(CHR_ORDER)
-for i, c in enumerate(CHR_ORDER):
-    TEXT_BYTE_ORDER[ord(c)] = i
-TEXT_BYTE_ORDER.extend(range(127, 256))
-assert len(TEXT_BYTE_ORDER) == 256
-assert sorted(TEXT_BYTE_ORDER) == list(range(256))
-
 
 def uniform(random, n):
     if n == 0:
@@ -77,28 +44,34 @@ class StopTest(BaseException):
 
 class TestData(object):
 
-    def __init__(self, buffer=None, random=None, build_up_to=-1):
-        assert (buffer is None) != (random is None)
-        if buffer is None:
-            self.buffer = bytearray()
-        else:
-            assert isinstance(buffer, bytes)
-            self.buffer = buffer
+    @classmethod
+    def for_buffer(self, buffer):
+        return TestData(
+            max_length=len(buffer),
+            draw_bytes=lambda data, n, distribution:
+            buffer[data.index:data.index + n]
+        )
+
+    def __init__(self, max_length, draw_bytes):
+        self.max_length = max_length
+        self._draw_bytes = draw_bytes
+
+        self.buffer = bytearray()
         self.output = bytearray()
-        self.index = 0
         self.status = Status.VALID
         self.frozen = False
         self.intervals = []
         self.interval_stack = []
-        self.start_example()
-        self.random = random
-        self.build_up_to = build_up_to
 
     def __assert_not_frozen(self, name):
         if self.frozen:
             raise Frozen(
                 'Cannot call %s on frozen TestData' % (
                     name,))
+
+    @property
+    def index(self):
+        return len(self.buffer)
 
     def note(self, value):
         self.__assert_not_frozen('note')
@@ -130,37 +103,25 @@ class TestData(object):
     def freeze(self):
         if self.frozen:
             return
-        self.stop_example()
         self.frozen = True
         # Intervals are sorted as longest first, then by interval start.
         self.intervals.sort(
             key=lambda se: (se[0] - se[1], se[0])
         )
-        if self.status == Status.INTERESTING:
-            self.buffer = self.buffer[:self.index]
-        if isinstance(self.buffer, bytearray):
-            self.buffer = bytes(self.buffer)
-            self.random = None
-            self.build_up_to = -1
+        self.buffer = bytes(self.buffer)
 
     def draw_bytes(self, n, distribution=uniform):
         self.__assert_not_frozen('draw_bytes')
-        build_mode = self.random is not None
-        if build_mode:
-            assert self.index == len(self.buffer)
-            assert isinstance(self.buffer, bytearray)
-        self.index += n
-        if self.index > max(len(self.buffer), self.build_up_to):
+        initial = self.index
+        if self.index + n > self.max_length:
             self.status = Status.OVERRUN
             self.freeze()
             raise StopTest(self)
-        self.intervals.append((self.index - n, self.index))
-        if build_mode:
-            result = distribution(self.random, n)
-            self.buffer.extend(result)
-        else:
-            result = self.buffer[self.index - n:self.index]
+        result = self._draw_bytes(self, n, distribution)
         assert len(result) == n
+        assert self.index == initial
+        self.buffer.extend(result)
+        self.intervals.append((initial, self.index))
         return result
 
     def mark_interesting(self):

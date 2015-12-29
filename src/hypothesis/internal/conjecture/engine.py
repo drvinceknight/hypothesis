@@ -45,7 +45,10 @@ class TestRunner(object):
 
     def new_buffer(self):
         self.last_data = TestData(
-            random=self.random, build_up_to=self.settings.buffer_size)
+            max_length=self.settings.buffer_size,
+            draw_bytes=lambda data, n, distribution:
+            distribution(self.random, n)
+        )
         self.test_function(self.last_data)
         self.last_data.freeze()
 
@@ -89,7 +92,7 @@ class TestRunner(object):
             self.last_data.buffer[:self.last_data.index]
         ):
             return False
-        data = TestData(buffer)
+        data = TestData.for_buffer(buffer)
         self.test_function(data)
         data.freeze()
         if data.status >= self.last_data.status:

@@ -38,6 +38,7 @@ class MorpherParameter(object):
 
 
 class Morpher(object):
+
     def __init__(self, data):
         self.data = data
 

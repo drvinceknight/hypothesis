@@ -25,9 +25,9 @@ from hypothesis.settings import Settings
 from hypothesis.searchstrategy import SearchStrategy
 from hypothesis.internal.compat import ArgSpec, text_type, getargspec, \
     integer_types, float_to_decimal, unicode_safe_repr
-from hypothesis.internal.reflection import proxies
 from hypothesis.internal.floats import is_negative, float_to_int, \
     int_to_float, count_between_floats
+from hypothesis.internal.reflection import proxies
 from hypothesis.searchstrategy.reprwrapper import ReprWrapperStrategy
 
 __all__ = [
