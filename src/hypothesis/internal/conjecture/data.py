@@ -109,6 +109,7 @@ class TestData(object):
             key=lambda se: (se[0] - se[1], se[0])
         )
         self.buffer = bytes(self.buffer)
+        del self._draw_bytes
 
     def draw_bytes(self, n, distribution=uniform):
         self.__assert_not_frozen('draw_bytes')
