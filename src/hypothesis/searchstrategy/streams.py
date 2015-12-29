@@ -33,4 +33,4 @@ class StreamStrategy(SearchStrategy):
         def gen():
             while True:
                 yield data.draw(self.source_strategy)
-        return Stream(gen)
+        return Stream(gen())
