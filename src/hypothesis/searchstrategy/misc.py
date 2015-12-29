@@ -26,7 +26,6 @@ class BoolStrategy(SearchStrategy):
 
     """A strategy that produces Booleans with a Bernoulli conditional
     distribution."""
-    template_upper_bound = 2
 
     def __repr__(self):
         return u'BoolStrategy()'
@@ -40,7 +39,6 @@ class JustStrategy(SearchStrategy):
     """
     A strategy which simply returns a single fixed value with probability 1.
     """
-    template_upper_bound = 1
 
     def __init__(self, value):
         SearchStrategy.__init__(self)
@@ -80,7 +78,6 @@ class SampledFromStrategy(SearchStrategy):
     def __init__(self, elements):
         SearchStrategy.__init__(self)
         self.elements = tuple(elements)
-        self.template_upper_bound = len(self.elements)
         assert self.elements
 
     def do_draw(self, data):

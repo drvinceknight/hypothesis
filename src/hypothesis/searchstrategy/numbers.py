@@ -17,10 +17,12 @@
 from __future__ import division, print_function, absolute_import
 
 import sys
+import math
 import struct
 from collections import namedtuple
 
 import hypothesis.internal.conjecture.utils as d
+from hypothesis.control import assume
 from hypothesis.internal.floats import sign, float_to_int, int_to_float
 from hypothesis.searchstrategy.misc import SampledFromStrategy
 from hypothesis.searchstrategy.strategies import SearchStrategy, \
@@ -122,24 +124,34 @@ class FloatStrategy(SearchStrategy):
 
     """Generic superclass for strategies which produce floats."""
 
-    def __init__(self):
+    def __init__(self, allow_infinity, allow_nan):
         SearchStrategy.__init__(self)
-        self.int_strategy = RandomGeometricIntStrategy()
+        assert isinstance(allow_infinity, bool)
+        assert isinstance(allow_nan, bool)
+        self.allow_infinity = allow_infinity
+        self.allow_nan = allow_nan
 
     def __repr__(self):
         return u'%s()' % (self.__class__.__name__,)
 
+    def permitted(self, f):
+        if not self.allow_infinity and math.isinf(f):
+            return False
+        if not self.allow_nan and math.isnan(f):
+            return False
+        return True
+
     def do_draw(self, data):
         def draw_float_bytes(random, n):
             assert n == 8
-            i = random.randint(1, 10)
-            if i == 1:
-                f = random.choice(NASTY_FLOATS)
-            elif i <= 3:
-                f = random.random() * 2 - 1.0
-            else:
-                return bytes(random.randint(0, 255) for _ in range(8))
-            return struct.pack(b'!d', f)
+            while True:
+                i = random.randint(1, 10)
+                if i <= 4:
+                    f = random.choice(NASTY_FLOATS)
+                else:
+                    return bytes(random.randint(0, 255) for _ in range(8))
+                if self.permitted(f):
+                    return struct.pack(b'!d', f)
         return struct.unpack(b'!d', data.draw_bytes(8, draw_float_bytes))[0]
 
 
@@ -161,7 +173,7 @@ class FullRangeFloats(FloatStrategy):
         self.allow_infinity = allow_infinity
 
 
-class FixedBoundedFloatStrategy(FloatStrategy):
+class FixedBoundedFloatStrategy(SearchStrategy):
 
     """A strategy for floats distributed between two endpoints.
 
@@ -175,27 +187,9 @@ class FixedBoundedFloatStrategy(FloatStrategy):
     )
 
     def __init__(self, lower_bound, upper_bound):
-        FloatStrategy.__init__(self)
+        SearchStrategy.__init__(self)
         self.lower_bound = float(lower_bound)
         self.upper_bound = float(upper_bound)
-        assert upper_bound >= lower_bound
-        self.intervals = []
-        if sign(upper_bound) > 0:
-            if sign(lower_bound) > 0:
-                self.intervals.append((
-                    float_to_int(self.lower_bound),
-                    float_to_int(self.upper_bound)))
-            else:
-                self.intervals.append((
-                    float_to_int(0.0),
-                    float_to_int(self.upper_bound)))
-                self.intervals.append((
-                    float_to_int(-0.0),
-                    float_to_int(self.lower_bound)))
-        else:
-            self.intervals.append((
-                float_to_int(self.upper_bound),
-                float_to_int(self.lower_bound)))
 
     def __repr__(self):
         return u'FixedBoundedFloatStrategy(%s, %s)' % (
@@ -203,10 +197,27 @@ class FixedBoundedFloatStrategy(FloatStrategy):
         )
 
     def do_draw(self, data):
-        interval = d.choice(data, self.intervals)
-        return int_to_float(
-            d.integer_range(data, *interval)
-        )
+        def distribution(random, n):
+            assert n == 8
+            i = random.randint(0, 10)
+            if i == 0:
+                f = self.lower_bound
+            elif i == 1:
+                f = self.upper_bound
+            else:
+                upper = self.upper_bound
+                lower = self.lower_bound
+                if lower < 0 < upper:
+                    if random.randint(0, 1):
+                        lower = 0.0
+                    else:
+                        upper = -0.0
+                f = lower + (upper - lower) * random.random()
+            return struct.pack(b'!d', f)
+        f = struct.unpack(b'!d', data.draw_bytes(8, distribution))[0]
+        assume(self.lower_bound <= f <= self.upper_bound)
+        assume(sign(self.lower_bound) <= sign(f) <= sign(self.upper_bound))
+        return f
 
 
 class NastyFloats(SampledFromStrategy):
