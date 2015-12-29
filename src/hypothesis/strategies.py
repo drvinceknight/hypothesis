@@ -240,19 +240,10 @@ def floats(
                     allow_infinity
                 ))
 
-    from hypothesis.searchstrategy.numbers import WrapperFloatStrategy, \
-        GaussianFloatStrategy, BoundedFloatStrategy, ExponentialFloatStrategy,\
-        JustIntFloats, NastyFloats, FullRangeFloats, \
+    from hypothesis.searchstrategy.numbers import FloatStrategy, \
         FixedBoundedFloatStrategy
     if min_value is None and max_value is None:
-        return WrapperFloatStrategy(
-            GaussianFloatStrategy() |
-            BoundedFloatStrategy() |
-            ExponentialFloatStrategy() |
-            JustIntFloats() |
-            NastyFloats(allow_nan, allow_infinity) |
-            FullRangeFloats(allow_nan, allow_infinity)
-        )
+        return FloatStrategy()
     from hypothesis.searchstrategy.numbers import FloatStrategy
     if min_value is None and max_value is None:
         return FloatStrategy()

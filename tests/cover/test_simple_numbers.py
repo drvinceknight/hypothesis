@@ -24,9 +24,7 @@ import pytest
 
 from hypothesis import find, given, assume
 from hypothesis.strategies import lists, floats, integers, complex_numbers
-from hypothesis.searchstrategy.numbers import is_integral, \
-    FixedBoundedFloatStrategy
-from hypothesis.searchstrategy.strategies import BadData
+from hypothesis.searchstrategy.numbers import is_integral
 
 
 def test_minimize_negative_int():
@@ -162,24 +160,6 @@ def test_minimizes_lists_of_negative_ints_up_to_boundary():
     result = find(
         lists(integers()), lambda x: len([t for t in x if t <= -1]) >= 10)
     assert result == [-1] * 10
-
-
-def test_out_of_range_integers_are_bad():
-    with pytest.raises(BadData):
-        integers(0, 1).from_basic(-1)
-
-    with pytest.raises(BadData):
-        integers(min_value=11).from_basic(9)
-
-
-def test_out_of_range_floats_are_bad():
-    with pytest.raises(BadData):
-        floats(11, 12).from_basic(floats(0, 1).to_basic((0, 0.0)))
-
-    with pytest.raises(BadData):
-        FixedBoundedFloatStrategy(11, 12).from_basic(
-            floats().to_basic(float(u'nan'))
-        )
 
 
 def test_float_simplicity():
