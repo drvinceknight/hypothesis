@@ -70,9 +70,7 @@ def convert_value(v):
 
 
 def cacheable(fn):
-    import weakref
-
-    cache = weakref.WeakValueDictionary()
+    cache = {}
 
     @proxies(fn)
     def cached_strategy(*args, **kwargs):
@@ -592,10 +590,9 @@ def text(
     min_size, max_size and average_size have the usual interpretations.
 
     """
-    from hypothesis.searchstrategy.strings import OneCharStringStrategy, \
-        StringStrategy
+    from hypothesis.searchstrategy.strings import StringStrategy
     if alphabet is None:
-        char_strategy = OneCharStringStrategy(blacklist_categories=['Cs'])
+        char_strategy = characters(blacklist_categories=('Cs',))
     elif not alphabet:
         if (min_size or 0) > 0:
             raise InvalidArgument(
