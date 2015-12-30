@@ -148,12 +148,11 @@ def integers(min_value=None, max_value=None):
     """
 
     from hypothesis.searchstrategy.numbers import IntegersFromStrategy, \
-        BoundedIntStrategy, RandomGeometricIntStrategy, WideRangeIntStrategy
+        BoundedIntStrategy, WideRangeIntStrategy
 
     if min_value is None:
         if max_value is None:
             return (
-                RandomGeometricIntStrategy() |
                 WideRangeIntStrategy()
             )
         else:
