@@ -24,13 +24,11 @@ except ImportError:
 
 from hypothesis.settings import Settings
 from hypothesis.internal.debug import timeout
-from hypothesis.strategytests import templates_for
 from tests.common.basic import Bitfields
 from hypothesis.strategies import integers, floats, just, one_of, \
     sampled_from, streaming, basic, lists, booleans, dictionaries, tuples, \
     frozensets, complex_numbers, sets, text, binary, decimals, fractions, \
     none, randoms, builds, fixed_dictionaries, recursive
-from hypothesis.internal.compat import hrange
 # from hypothesis.searchstrategy.narytree import n_ary_tree
 from hypothesis.utils.show import show
 
@@ -72,7 +70,6 @@ with Settings(average_list_length=10.0):
         #n_ary_tree(integers(), integers(), integers()),
         abc(booleans(), booleans(), booleans()),
         abc(booleans(), booleans(), integers()),
-        templates_for(one_of(*map(just, hrange(10)))),
         fixed_dictionaries({u'a': integers(), u'b': booleans()}),
         dictionaries(booleans(), integers()),
         dictionaries(text(), booleans()),
@@ -105,8 +102,6 @@ with Settings(average_list_length=10.0):
         floats(min_value=-sys.float_info.max, max_value=sys.float_info.max),
         none(), randoms(),
         tuples().flatmap(lambda x: EvalledIntStream),
-        templates_for(integers(min_value=0, max_value=0).flatmap(
-            lambda x: integers(min_value=0, max_value=0))),
         booleans().flatmap(lambda x: booleans() if x else complex_numbers()),
         recursive(
             base=booleans(), extend=lambda x: lists(x, max_size=3),

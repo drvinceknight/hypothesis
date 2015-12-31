@@ -590,10 +590,9 @@ def find(specifier, condition, settings=None, random=None, storage=None):
                         repr(result),
                     ))
                 else:
-                    if data.better_than(last_data[0]):
-                        report(lambda: u'Shrunk example to %s' % (
-                            repr(result),
-                        ))
+                    report(lambda: u'Shrunk example to %s' % (
+                        repr(result),
+                    ))
                 last_data[0] = data
         if success:
             data.mark_interesting()

@@ -24,7 +24,6 @@ import pytest
 import hypothesis.strategies as st
 from hypothesis import find, given, assume, Settings
 from hypothesis.internal.compat import WINDOWS
-from hypothesis.searchstrategy.numbers import FullRangeFloats
 
 
 @pytest.mark.parametrize((u'l', u'r'), [
@@ -109,22 +108,4 @@ def test_filter_nan(x):
 
 @given(st.floats(allow_infinity=False))
 def test_filter_infinity(x):
-    assert not math.isinf(x)
-
-
-@given(FullRangeFloats(allow_nan=False), settings=Settings(max_examples=30000))
-def test_full_range_float_filter_nan(x):
-    assert not math.isnan(x)
-
-
-@given(FullRangeFloats(allow_infinity=False),
-       settings=Settings(max_examples=30000))
-def test_full_range_float_filter_infinity(x):
-    assert not math.isinf(x)
-
-
-@given(FullRangeFloats(allow_nan=False, allow_infinity=False),
-       settings=Settings(max_examples=30000))
-def test_full_range_float_filter_infinity_and_nan(x):
-    assert not math.isnan(x)
     assert not math.isinf(x)
