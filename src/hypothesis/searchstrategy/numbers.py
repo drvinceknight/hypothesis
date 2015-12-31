@@ -72,11 +72,12 @@ class RandomGeometricIntStrategy(IntStrategy):
 
 
 class WideRangeIntStrategy(IntStrategy):
+
     def __repr__(self):
         return u'WideRangeIntStrategy()'
 
     def do_draw(self, data):
-        size = 20
+        size = 16
 
         def distribution(random, n):
             assert n == size
@@ -91,8 +92,12 @@ class WideRangeIntStrategy(IntStrategy):
             if random.randint(0, 1):
                 r = -r
             return r.to_bytes(n, 'big', signed=True)
+        negative = data.draw_bytes(1)[0] & 1
         byt = data.draw_bytes(size, distribution=distribution)
-        return int.from_bytes(byt, 'big', signed=True)
+        r = int.from_bytes(byt, 'big', signed=False)
+        if negative:
+            r = -r
+        return r
 
 
 class BoundedIntStrategy(SearchStrategy):
