@@ -43,8 +43,8 @@ from hypothesis.internal.reflection import proxies
 from hypothesis.searchstrategy.misc import JustStrategy, \
     SampledFromStrategy
 from hypothesis.internal.strategymethod import strategy
-from hypothesis.searchstrategy.strategies import \
-    SearchStrategy, one_of_strategies
+from hypothesis.searchstrategy.strategies import SearchStrategy, \
+    one_of_strategies
 from hypothesis.searchstrategy.collections import TupleStrategy, \
     FixedKeysDictStrategy
 

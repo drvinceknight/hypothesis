@@ -28,7 +28,7 @@ from tests.common.basic import Bitfields, BoringBitfields, \
 from tests.common.utils import fails
 from hypothesis.database import ExampleDatabase
 from hypothesis.strategies import basic, lists
-from hypothesis.internal.debug import minimal, timeout, some_template
+from hypothesis.internal.debug import minimal, timeout
 from hypothesis.internal.compat import integer_types
 from hypothesis.searchstrategy.basic import basic_strategy
 
@@ -195,23 +195,3 @@ def test_can_provide_just_param_and_generate():
         generate=lambda r, p: r.getrandbits(128) & p,
     )
     assert minimal(bf)
-
-
-def test_simplifying_results_in_strictly_simpler():
-    random = Random(u'test_simplifying_results_in_strictly_simpler')
-    strat = basic(Bitfields)
-    template = some_template(strat, random)
-    for shrunk_template in strat.full_simplify(random, template):
-        assert strat.strictly_simpler(shrunk_template, template)
-
-
-def test_can_recalculate_shrinks_without_reify_cache():
-    random = Random(u'test_can_recalculate_shrinks_without_reify_cache')
-    strat = basic(Bitfields)
-    template = some_template(strat, random)
-    for shrunk_template in strat.full_simplify(random, template):
-        strat.wrapped_strategy.reify_cache.pop(shrunk_template, None)
-        strat.wrapped_strategy.reify_cache.pop(template, None)
-        assert not (~strat.reify(template) & strat.reify(shrunk_template))
-    new_template = strat.from_basic(strat.to_basic(template))
-    assert strat.reify(template) == strat.reify(new_template)
