@@ -26,22 +26,27 @@ from hypothesis.strategies import sets, lists, floats, randoms, booleans, \
     integers, frozensets
 
 
-def test_template_equality():
+@given(integers())
+@settings(max_examples=1)
+def test_template_equality(seed):
     s = sets(integers())
-    t = s.draw_and_produce(Random(1))
+    t = s.draw_and_produce(Random(seed))
     assert t != 1
 
-    t2 = s.draw_and_produce(Random(1))
+    t2 = s.draw_and_produce(Random(seed))
     assert t is not t2
     assert t == t2
     s.reify(t2)
     assert t == t2
     assert hash(t) == hash(t2)
 
-    t3 = s.draw_and_produce(Random(1))
+    t3 = s.draw_and_produce(Random(seed))
     s.reify(t3)
-    for ts in s.full_simplify(Random(1), t3):
+    simplified = False
+    for ts in s.full_simplify(Random(seed), t3):
+        simplified = True
         assert t3 != ts
+    assume(simplified)
 
 
 def test_simplifying_unreified_template_does_not_error():
